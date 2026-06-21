@@ -1,0 +1,446 @@
+{
+  "schema_version": 2,
+  "description": "Garden bed outlines from the site sketch. Each bed has one or more polygons (px on source image; divide by px_per_foot for feet). Multi-polygon beds are one planting area spanning all polygons.",
+  "source_image": {
+    "name": "Untitled_Artwork.png",
+    "width": 2732,
+    "height": 2048
+  },
+  "px_per_foot": 11.0,
+  "units": {
+    "polygons": "pixels",
+    "edges_ft": "feet",
+    "area_sqft": "square_feet"
+  },
+  "bed_count": 7,
+  "total_area_sqft": 510,
+  "beds": [
+    {
+      "id": "front_yard",
+      "name": "Entry Garden Island",
+      "color": "#87dad8",
+      "polygons": [
+        [
+          [
+            638,
+            1196
+          ],
+          [
+            655,
+            1171
+          ],
+          [
+            682,
+            1158
+          ],
+          [
+            713,
+            1160
+          ],
+          [
+            738,
+            1177
+          ],
+          [
+            751,
+            1204
+          ],
+          [
+            749,
+            1235
+          ],
+          [
+            695,
+            1391
+          ],
+          [
+            678,
+            1416
+          ],
+          [
+            651,
+            1429
+          ],
+          [
+            620,
+            1427
+          ],
+          [
+            595,
+            1410
+          ],
+          [
+            582,
+            1382
+          ],
+          [
+            584,
+            1352
+          ]
+        ]
+      ],
+      "multi": false,
+      "edges_ft": [
+        16,
+        14.5,
+        13,
+        12,
+        12,
+        10
+      ],
+      "area_sqft": 246,
+      "perimeter_ft": 77.5,
+      "light": "sun",
+      "blurb": "A big, sunny island bed by the front walk with shade trees \u2014 room for showy shrubs, perennials, and grasses.",
+      "name_ideas": [
+        "The Welcome Garden",
+        "Front Walk Island",
+        "The Arrival Border",
+        "Shade-Tree Island",
+        "The Entry Garden"
+      ]
+    },
+    {
+      "id": "generator",
+      "name": "West-Wing Bed",
+      "color": "#a577d0",
+      "polygons": [
+        [
+          [
+            1145,
+            653
+          ],
+          [
+            1136,
+            681
+          ],
+          [
+            1052,
+            723
+          ],
+          [
+            1027,
+            697
+          ]
+        ],
+        [
+          [
+            967,
+            729
+          ],
+          [
+            975,
+            729
+          ],
+          [
+            992,
+            759
+          ],
+          [
+            945,
+            784
+          ]
+        ]
+      ],
+      "multi": true,
+      "edges_ft": [
+        11.1,
+        8.5,
+        5,
+        4.5,
+        3.1,
+        3.1,
+        2
+      ],
+      "area_sqft": 35,
+      "perimeter_ft": 37.3,
+      "light": "sun",
+      "blurb": "A short evergreen screen that tucks the generator out of sight.",
+      "name_ideas": [
+        "The Screen Garden",
+        "Evergreen Hedge",
+        "The Hideaway Hedge",
+        "Quiet Corner Screen",
+        "The Privacy Planting"
+      ]
+    },
+    {
+      "id": "west_stair",
+      "name": "Pond-View Garden",
+      "color": "#fe7765",
+      "polygons": [
+        [
+          [
+            1220,
+            767
+          ],
+          [
+            1244,
+            711
+          ],
+          [
+            1393,
+            868
+          ]
+        ],
+        [
+          [
+            1137,
+            681
+          ],
+          [
+            1144,
+            655
+          ],
+          [
+            1188,
+            672
+          ],
+          [
+            1162,
+            713
+          ],
+          [
+            1155,
+            713
+          ]
+        ]
+      ],
+      "multi": true,
+      "edges_ft": [
+        19,
+        17.8,
+        5.3,
+        4,
+        3.5
+      ],
+      "area_sqft": 64,
+      "perimeter_ft": 49.6,
+      "light": "sun",
+      "blurb": "A low, sunny border running along the west stairs.",
+      "name_ideas": [
+        "West Steps Border",
+        "The Sunset Stair Garden",
+        "West Landing Bed",
+        "Sunset Steps Border",
+        "The Western Stair Garden"
+      ]
+    },
+    {
+      "id": "east_stair",
+      "name": "Shower Nook Bed",
+      "color": "#ee6fee",
+      "polygons": [
+        [
+          [
+            1104,
+            1356
+          ],
+          [
+            1131,
+            1363
+          ],
+          [
+            1149,
+            1335
+          ],
+          [
+            1156,
+            1335
+          ],
+          [
+            1172,
+            1365
+          ],
+          [
+            1183,
+            1370
+          ],
+          [
+            1191,
+            1395
+          ],
+          [
+            1169,
+            1409
+          ],
+          [
+            1132,
+            1405
+          ],
+          [
+            1108,
+            1384
+          ]
+        ]
+      ],
+      "multi": false,
+      "edges_ft": [
+        8.5,
+        8,
+        6.1,
+        2.9,
+        2
+      ],
+      "area_sqft": 32,
+      "perimeter_ft": 27.5,
+      "light": "shade",
+      "blurb": "A small, softly rounded shade pocket beside the east stairs.",
+      "name_ideas": [
+        "East Steps Nook",
+        "The Morning Stair Garden",
+        "East Landing Pocket",
+        "Sunrise Steps Bed",
+        "The Little Stair Garden"
+      ]
+    },
+    {
+      "id": "shower",
+      "name": "Outdoor shower bed",
+      "color": "#62ae7a",
+      "polygons": [
+        [
+          [
+            1373,
+            1199
+          ],
+          [
+            1313,
+            1268
+          ],
+          [
+            1288,
+            1284
+          ],
+          [
+            1276,
+            1251
+          ]
+        ]
+      ],
+      "multi": false,
+      "edges_ft": [
+        10.5,
+        9.4,
+        3
+      ],
+      "area_sqft": 19,
+      "perimeter_ft": 22.9,
+      "light": "shade",
+      "blurb": "A damp, shaded bed by the outdoor shower that adds a little privacy.",
+      "name_ideas": [
+        "The Shower Garden",
+        "Bath-House Border",
+        "The Rinse Garden",
+        "Shower Privacy Bed",
+        "The Spa Nook"
+      ]
+    },
+    {
+      "id": "kitchen",
+      "name": "Kitchen Doorstep Garden",
+      "color": "#f7c85d",
+      "polygons": [
+        [
+          [
+            946,
+            795
+          ],
+          [
+            967,
+            774
+          ],
+          [
+            1068,
+            939
+          ],
+          [
+            1067,
+            950
+          ],
+          [
+            1047,
+            951
+          ],
+          [
+            1044,
+            1012
+          ],
+          [
+            1026,
+            941
+          ],
+          [
+            1027,
+            1010
+          ]
+        ]
+      ],
+      "multi": false,
+      "edges_ft": [
+        17.4,
+        13.5,
+        5.5,
+        5,
+        2.5,
+        2,
+        1.5
+      ],
+      "area_sqft": 62,
+      "perimeter_ft": 47.4,
+      "light": "sun",
+      "blurb": "Culinary herbs a few steps from the kitchen door.",
+      "name_ideas": [
+        "The Kitchen Herb Garden",
+        "The Cook's Garden",
+        "Doorstep Herbs",
+        "The Potager",
+        "The Chef's Border"
+      ]
+    },
+    {
+      "id": "east_front",
+      "name": "Welcome Walk Garden",
+      "color": "#6c88d8",
+      "polygons": [
+        [
+          [
+            1026,
+            1097
+          ],
+          [
+            1066,
+            1094
+          ],
+          [
+            970,
+            1264
+          ],
+          [
+            937,
+            1252
+          ]
+        ]
+      ],
+      "multi": false,
+      "edges_ft": [
+        17.5,
+        16,
+        3,
+        3,
+        0.5
+      ],
+      "area_sqft": 52,
+      "perimeter_ft": 40.0,
+      "light": "sun",
+      "blurb": "A sunny strip on the east side for easy, care-free flowering perennials.",
+      "name_ideas": [
+        "East Garden Strip",
+        "The Morning Border",
+        "East Wing Garden",
+        "Sunrise Perennial Bed",
+        "The East Front Border"
+      ]
+    }
+  ]
+}
