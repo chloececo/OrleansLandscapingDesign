@@ -134,117 +134,58 @@ footer{color:var(--muted);font-size:12px;margin-top:22px;text-align:center}
 </div>
 
 <script>
-const BEDS=[{"id": "front_yard", "name": "Front yard bed", "color": "#87dad8", "points_px": [[606, 1245], [701, 1127], [793, 1174], [690, 1369], [586, 1359]], "edges_ft": [16, 14.5, 13, 12, 12, 10], "area_sqft": 150, "perimeter_ft": 77.5, "note": "Sketch reads ~20 ft long (~230 sq ft); area shown is scaled to your 16 ft label. Most uncertain bed (two trees overlap it).", "light": "sun", "blurb": "Big, sunny bed by the front walk \u2014 room for showy shrubs with perennials and grasses woven between them."}, {"id": "generator", "name": "Generator bed", "color": "#a577d0", "points_px": [[1132, 656], [1143, 654], [1134, 679], [1050, 721], [1045, 720], [1028, 695], [1028, 690], [1038, 688]], "edges_ft": [11.1, 8.5, 5, 4.5, 3.1, 3.1, 2], "area_sqft": 26, "perimeter_ft": 37.3, "note": "Wraps around the skylight at the house corner.", "light": "sun", "blurb": "Screen the generator with a short, tidy evergreen hedge."}, {"id": "west_stair", "name": "West-wing staircase bed", "color": "#fe7765", "points_px": [[1221, 765], [1245, 712], [1250, 712], [1342, 809], [1389, 865]], "edges_ft": [19, 17.8, 5.3, 4, 3.5], "area_sqft": 55, "perimeter_ft": 49.6, "note": "Long tip overlaps a tree in the sketch; length taken from your 19 ft label.", "light": "part sun", "blurb": "Low border along the west stairs \u2014 keeps the steps and sightlines open."}, {"id": "east_stair", "name": "East-wing staircase bed", "color": "#ee6fee", "points_px": [[1105, 1357], [1134, 1362], [1154, 1336], [1189, 1393], [1133, 1403]], "edges_ft": [8.5, 8, 6.1, 2.9, 2], "area_sqft": 23, "perimeter_ft": 27.5, "light": "shade", "blurb": "A small shaded pocket beside the east stairs."}, {"id": "shower", "name": "Outdoor shower bed", "color": "#62ae7a", "points_px": [[1371, 1200], [1289, 1282], [1280, 1250]], "edges_ft": [10.5, 9.4, 3], "area_sqft": 14, "perimeter_ft": 22.9, "light": "shade", "blurb": "Tucked by the outdoor shower \u2014 likes damp shade and adds a little privacy."}, {"id": "kitchen", "name": "Kitchen bed", "color": "#f7c85d", "points_px": [[947, 793], [967, 776], [1066, 940], [1045, 949], [1024, 932], [1043, 1009], [1029, 1008]], "edges_ft": [17.4, 13.5, 5.5, 5, 2.5, 2, 1.5], "area_sqft": 62, "perimeter_ft": 47.4, "note": "Wraps around the generator pad at the base; area is approximate.", "light": "sun", "blurb": "Steps from the kitchen \u2014 culinary herbs you will actually use."}, {"id": "east_front", "name": "East-wing front yard bed", "color": "#6c88d8", "points_px": [[1027, 1098], [1064, 1095], [968, 1262], [961, 1264], [938, 1250]], "edges_ft": [17.5, 16, 3, 3, 0.5], "area_sqft": 48, "perimeter_ft": 40.0, "light": "sun", "blurb": "Sunny strip on the east side \u2014 easy, care-free flowering perennials."}], PLANTS={"boxwood": {"name": "Boxwood", "color": "#3f7a4f", "spread": 3, "light": "sun", "cat": "Shrub"}, "arborvitae": {"name": "Arborvitae", "color": "#2f6b43", "spread": 3, "light": "sun", "cat": "Shrub"}, "holly": {"name": "Holly", "color": "#2e5d3a", "spread": 4, "light": "part", "cat": "Shrub"}, "hydrangea": {"name": "Hydrangea", "color": "#7aa6d6", "spread": 4, "light": "part", "cat": "Shrub"}, "rhododendron": {"name": "Rhododendron", "color": "#c46b9a", "spread": 4, "light": "part", "cat": "Shrub"}, "spirea": {"name": "Spirea", "color": "#d98aa6", "spread": 3, "light": "sun", "cat": "Shrub"}, "viburnum": {"name": "Viburnum", "color": "#6f9e6a", "spread": 5, "light": "sun", "cat": "Shrub"}, "lavender": {"name": "Lavender", "color": "#8e7cc3", "spread": 2.5, "light": "sun", "cat": "Perennial"}, "salvia": {"name": "Salvia", "color": "#6a4fb0", "spread": 1.5, "light": "sun", "cat": "Perennial"}, "catmint": {"name": "Catmint", "color": "#9aa7d8", "spread": 2, "light": "sun", "cat": "Perennial"}, "coneflower": {"name": "Coneflower", "color": "#d98ab0", "spread": 1.5, "light": "sun", "cat": "Perennial"}, "daylily": {"name": "Daylily", "color": "#e8a13c", "spread": 2, "light": "sun", "cat": "Perennial"}, "rudbeckia": {"name": "Black-eyed Susan", "color": "#f2c14e", "spread": 1.5, "light": "sun", "cat": "Perennial"}, "hosta": {"name": "Hosta", "color": "#8fb06a", "spread": 2.5, "light": "shade", "cat": "Perennial"}, "heuchera": {"name": "Coral Bells", "color": "#b0573f", "spread": 1.5, "light": "part", "cat": "Perennial"}, "astilbe": {"name": "Astilbe", "color": "#cf7fb0", "spread": 2, "light": "shade", "cat": "Perennial"}, "sedum": {"name": "Sedum", "color": "#b98a6a", "spread": 1.5, "light": "sun", "cat": "Perennial"}, "fountaingrass": {"name": "Fountain Grass", "color": "#c9a96a", "spread": 3, "light": "sun", "cat": "Grass"}, "reedgrass": {"name": "Feather Reed Grass", "color": "#c8b277", "spread": 2, "light": "sun", "cat": "Grass"}, "liriope": {"name": "Liriope", "color": "#7d6fb0", "spread": 1, "light": "part", "cat": "Grass"}, "fern": {"name": "Fern", "color": "#4f8a5b", "spread": 2, "light": "shade", "cat": "Fern"}, "thymeground": {"name": "Creeping Thyme", "color": "#a98fd0", "spread": 1.5, "light": "sun", "cat": "Groundcover"}, "vinca": {"name": "Vinca", "color": "#7c9fd6", "spread": 1.5, "light": "part", "cat": "Groundcover"}, "rosemary": {"name": "Rosemary", "color": "#6b8f6b", "spread": 2.5, "light": "sun", "cat": "Herb"}, "thyme": {"name": "Thyme", "color": "#9ab07a", "spread": 1, "light": "sun", "cat": "Herb"}, "sage": {"name": "Sage", "color": "#9fb59a", "spread": 2, "light": "sun", "cat": "Herb"}, "basil": {"name": "Basil", "color": "#4f8a4f", "spread": 1, "light": "sun", "cat": "Herb"}, "parsley": {"name": "Parsley", "color": "#5ea05e", "spread": 0.8, "light": "part", "cat": "Herb"}, "oregano": {"name": "Oregano", "color": "#8aa86a", "spread": 1.5, "light": "sun", "cat": "Herb"}, "mint": {"name": "Mint", "color": "#6fbf8f", "spread": 1.5, "light": "part", "cat": "Herb"}, "chives": {"name": "Chives", "color": "#8a9fd8", "spread": 0.8, "light": "sun", "cat": "Herb"}}, RECS={"front_yard": ["hydrangea", "hydrangea", "lavender", "lavender", "lavender", "salvia", "salvia", "fountaingrass", "fountaingrass", "coneflower", "coneflower"], "generator": ["arborvitae", "arborvitae", "arborvitae", "boxwood", "boxwood"], "west_stair": ["heuchera", "heuchera", "heuchera", "catmint", "catmint", "liriope", "liriope", "liriope"], "east_stair": ["hosta", "hosta", "hosta", "heuchera", "heuchera"], "shower": ["fern", "fern", "fern", "astilbe", "astilbe", "hosta"], "kitchen": ["rosemary", "rosemary", "sage", "sage", "thyme", "thyme", "thyme", "basil", "basil", "parsley", "chives"], "east_front": ["daylily", "daylily", "daylily", "catmint", "catmint", "rudbeckia", "rudbeckia", "salvia"]}, PPF=11.0;
+const BEDS=[{"id": "front_yard", "name": "Entry Garden Island", "color": "#87dad8", "polygons": [[[638, 1196], [655, 1171], [682, 1158], [713, 1160], [738, 1177], [751, 1204], [749, 1235], [695, 1391], [678, 1416], [651, 1429], [620, 1427], [595, 1410], [582, 1382], [584, 1352]]], "multi": false, "edges_ft": [16, 14.5, 13, 12, 12, 10], "area_sqft": 246, "perimeter_ft": 77.5, "light": "sun", "blurb": "Big, sunny bed by the front walk \u2014 room for showy shrubs with perennials and grasses woven between them.", "name_ideas": ["The Welcome Garden", "Front Walk Island", "The Arrival Border", "Shade-Tree Island", "The Entry Garden"]}, {"id": "generator", "name": "West-Wing Bed", "color": "#a577d0", "polygons": [[[1145, 653], [1136, 681], [1052, 723], [1027, 697]], [[967, 729], [975, 729], [992, 759], [945, 784]]], "multi": true, "edges_ft": [11.1, 8.5, 5, 4.5, 3.1, 3.1, 2], "area_sqft": 35, "perimeter_ft": 37.3, "light": "sun", "blurb": "Screen the generator with a short, tidy evergreen hedge.", "name_ideas": ["The Screen Garden", "Evergreen Hedge", "The Hideaway Hedge", "Quiet Corner Screen", "The Privacy Planting"]}, {"id": "west_stair", "name": "Pond-View Garden", "color": "#fe7765", "polygons": [[[1220, 767], [1244, 711], [1393, 868]], [[1137, 681], [1144, 655], [1188, 672], [1162, 713], [1155, 713]]], "multi": true, "edges_ft": [19, 17.8, 5.3, 4, 3.5], "area_sqft": 64, "perimeter_ft": 49.6, "light": "part sun", "blurb": "Low border along the west stairs \u2014 keeps the steps and sightlines open.", "name_ideas": ["West Steps Border", "The Sunset Stair Garden", "West Landing Bed", "Sunset Steps Border", "The Western Stair Garden"]}, {"id": "east_stair", "name": "Shower Nook Bed", "color": "#ee6fee", "polygons": [[[1104, 1356], [1131, 1363], [1149, 1335], [1156, 1335], [1172, 1365], [1183, 1370], [1191, 1395], [1169, 1409], [1132, 1405], [1108, 1384]]], "multi": false, "edges_ft": [8.5, 8, 6.1, 2.9, 2], "area_sqft": 32, "perimeter_ft": 27.5, "light": "shade", "blurb": "A small shaded pocket beside the east stairs.", "name_ideas": ["East Steps Nook", "The Morning Stair Garden", "East Landing Pocket", "Sunrise Steps Bed", "The Little Stair Garden"]}, {"id": "shower", "name": "Outdoor shower bed", "color": "#62ae7a", "polygons": [[[1373, 1199], [1313, 1268], [1288, 1284], [1276, 1251]]], "multi": false, "edges_ft": [10.5, 9.4, 3], "area_sqft": 19, "perimeter_ft": 22.9, "light": "shade", "blurb": "Tucked by the outdoor shower \u2014 likes damp shade and adds a little privacy.", "name_ideas": ["The Shower Garden", "Bath-House Border", "The Rinse Garden", "Shower Privacy Bed", "The Spa Nook"]}, {"id": "kitchen", "name": "Kitchen Doorstep Garden", "color": "#f7c85d", "polygons": [[[946, 795], [967, 774], [1068, 939], [1067, 950], [1047, 951], [1044, 1012], [1026, 941], [1027, 1010]]], "multi": false, "edges_ft": [17.4, 13.5, 5.5, 5, 2.5, 2, 1.5], "area_sqft": 62, "perimeter_ft": 47.4, "light": "sun", "blurb": "Steps from the kitchen \u2014 culinary herbs you will actually use.", "name_ideas": ["The Kitchen Herb Garden", "The Cook's Garden", "Doorstep Herbs", "The Potager", "The Chef's Border"]}, {"id": "east_front", "name": "Welcome Walk Garden", "color": "#6c88d8", "polygons": [[[1026, 1097], [1066, 1094], [970, 1264], [937, 1252]]], "multi": false, "edges_ft": [17.5, 16, 3, 3, 0.5], "area_sqft": 52, "perimeter_ft": 40.0, "light": "sun", "blurb": "Sunny strip on the east side \u2014 easy, care-free flowering perennials.", "name_ideas": ["East Garden Strip", "The Morning Border", "East Wing Garden", "Sunrise Perennial Bed", "The East Front Border"]}], PLANTS={"boxwood": {"name": "Boxwood", "color": "#3f7a4f", "spread": 3, "light": "sun", "cat": "Shrub"}, "arborvitae": {"name": "Arborvitae", "color": "#2f6b43", "spread": 3, "light": "sun", "cat": "Shrub"}, "holly": {"name": "Holly", "color": "#2e5d3a", "spread": 4, "light": "part", "cat": "Shrub"}, "hydrangea": {"name": "Hydrangea", "color": "#7aa6d6", "spread": 4, "light": "part", "cat": "Shrub"}, "rhododendron": {"name": "Rhododendron", "color": "#c46b9a", "spread": 4, "light": "part", "cat": "Shrub"}, "spirea": {"name": "Spirea", "color": "#d98aa6", "spread": 3, "light": "sun", "cat": "Shrub"}, "viburnum": {"name": "Viburnum", "color": "#6f9e6a", "spread": 5, "light": "sun", "cat": "Shrub"}, "lavender": {"name": "Lavender", "color": "#8e7cc3", "spread": 2.5, "light": "sun", "cat": "Perennial"}, "salvia": {"name": "Salvia", "color": "#6a4fb0", "spread": 1.5, "light": "sun", "cat": "Perennial"}, "catmint": {"name": "Catmint", "color": "#9aa7d8", "spread": 2, "light": "sun", "cat": "Perennial"}, "coneflower": {"name": "Coneflower", "color": "#d98ab0", "spread": 1.5, "light": "sun", "cat": "Perennial"}, "daylily": {"name": "Daylily", "color": "#e8a13c", "spread": 2, "light": "sun", "cat": "Perennial"}, "rudbeckia": {"name": "Black-eyed Susan", "color": "#f2c14e", "spread": 1.5, "light": "sun", "cat": "Perennial"}, "hosta": {"name": "Hosta", "color": "#8fb06a", "spread": 2.5, "light": "shade", "cat": "Perennial"}, "heuchera": {"name": "Coral Bells", "color": "#b0573f", "spread": 1.5, "light": "part", "cat": "Perennial"}, "astilbe": {"name": "Astilbe", "color": "#cf7fb0", "spread": 2, "light": "shade", "cat": "Perennial"}, "sedum": {"name": "Sedum", "color": "#b98a6a", "spread": 1.5, "light": "sun", "cat": "Perennial"}, "fountaingrass": {"name": "Fountain Grass", "color": "#c9a96a", "spread": 3, "light": "sun", "cat": "Grass"}, "reedgrass": {"name": "Feather Reed Grass", "color": "#c8b277", "spread": 2, "light": "sun", "cat": "Grass"}, "liriope": {"name": "Liriope", "color": "#7d6fb0", "spread": 1, "light": "part", "cat": "Grass"}, "fern": {"name": "Fern", "color": "#4f8a5b", "spread": 2, "light": "shade", "cat": "Fern"}, "thymeground": {"name": "Creeping Thyme", "color": "#a98fd0", "spread": 1.5, "light": "sun", "cat": "Groundcover"}, "vinca": {"name": "Vinca", "color": "#7c9fd6", "spread": 1.5, "light": "part", "cat": "Groundcover"}, "rosemary": {"name": "Rosemary", "color": "#6b8f6b", "spread": 2.5, "light": "sun", "cat": "Herb"}, "thyme": {"name": "Thyme", "color": "#9ab07a", "spread": 1, "light": "sun", "cat": "Herb"}, "sage": {"name": "Sage", "color": "#9fb59a", "spread": 2, "light": "sun", "cat": "Herb"}, "basil": {"name": "Basil", "color": "#4f8a4f", "spread": 1, "light": "sun", "cat": "Herb"}, "parsley": {"name": "Parsley", "color": "#5ea05e", "spread": 0.8, "light": "part", "cat": "Herb"}, "oregano": {"name": "Oregano", "color": "#8aa86a", "spread": 1.5, "light": "sun", "cat": "Herb"}, "mint": {"name": "Mint", "color": "#6fbf8f", "spread": 1.5, "light": "part", "cat": "Herb"}, "chives": {"name": "Chives", "color": "#8a9fd8", "spread": 0.8, "light": "sun", "cat": "Herb"}}, RECS={"front_yard": ["hydrangea", "hydrangea", "lavender", "lavender", "lavender", "salvia", "salvia", "fountaingrass", "fountaingrass", "coneflower", "coneflower"], "generator": ["arborvitae", "arborvitae", "arborvitae", "boxwood", "boxwood"], "west_stair": ["heuchera", "heuchera", "heuchera", "catmint", "catmint", "liriope", "liriope", "liriope"], "east_stair": ["hosta", "hosta", "hosta", "heuchera", "heuchera"], "shower": ["fern", "fern", "fern", "astilbe", "astilbe", "hosta"], "kitchen": ["rosemary", "rosemary", "sage", "sage", "thyme", "thyme", "thyme", "basil", "basil", "parsley", "chives"], "east_front": ["daylily", "daylily", "daylily", "catmint", "catmint", "rudbeckia", "rudbeckia", "salvia"]}, PPF=11.0;
 const SRCW=2732, SRCH=2048;
 const SVGNS="http://www.w3.org/2000/svg";
 let state={layouts:{}}, sel={bed:null, plant:null};
 
-/* ---------- persistence (safe on GitHub Pages, no-op in sandboxes) ---------- */
-function save(){ try{ localStorage.setItem('gardenPlan', JSON.stringify(state.layouts)); }catch(e){} }
-function load(){ try{ const s=localStorage.getItem('gardenPlan'); if(s) state.layouts=JSON.parse(s); }catch(e){} }
+function save(){ try{ localStorage.setItem('gardenPlan2', JSON.stringify(state.layouts)); }catch(e){} }
+function load(){ try{ const s=localStorage.getItem('gardenPlan2'); if(s) state.layouts=JSON.parse(s); }catch(e){} }
 
-/* ---------- helpers ---------- */
-function bedById(id){ return BEDS.find(b=>b.id===id); }
-function abbr(name){ const c=(name.match(/[A-Z]/g)||[]); return (c.length>=2?c.slice(0,2).join(''):name.slice(0,2)).toUpperCase(); }
-function bbox(pts){ const xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]); return {x0:Math.min(...xs),y0:Math.min(...ys),x1:Math.max(...xs),y1:Math.max(...ys)}; }
-function polyFt(bed){ const b=bbox(bed.points_px); return bed.points_px.map(p=>[(p[0]-b.x0)/PPF,(p[1]-b.y0)/PPF]); }
-function bedSizeFt(bed){ const b=bbox(bed.points_px); return [(b.x1-b.x0)/PPF,(b.y1-b.y0)/PPF]; }
-function pointInPoly(x,y,poly){ let inside=false; for(let i=0,j=poly.length-1;i<poly.length;j=i++){
-  const xi=poly[i][0],yi=poly[i][1],xj=poly[j][0],yj=poly[j][1];
-  if(((yi>y)!=(yj>y))&&(x<(xj-xi)*(y-yi)/(yj-yi)+xi)) inside=!inside; } return inside; }
-function centroidFt(poly){ let x=0,y=0; poly.forEach(p=>{x+=p[0];y+=p[1];}); return [x/poly.length,y/poly.length]; }
+const bedById=id=>BEDS.find(b=>b.id===id);
+const allPts=bed=>bed.polygons.flat();
+function abbr(n){const c=(n.match(/[A-Z]/g)||[]);return (c.length>=2?c.slice(0,2).join(''):n.slice(0,2)).toUpperCase();}
+function bbox(pts){const xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]);return{x0:Math.min(...xs),y0:Math.min(...ys),x1:Math.max(...xs),y1:Math.max(...ys)};}
+const bedBox=bed=>bbox(allPts(bed));
+function polysFt(bed){const b=bedBox(bed);return bed.polygons.map(poly=>poly.map(p=>[(p[0]-b.x0)/PPF,(p[1]-b.y0)/PPF]));}
+function bedSizeFt(bed){const b=bedBox(bed);return[(b.x1-b.x0)/PPF,(b.y1-b.y0)/PPF];}
+function pip(x,y,poly){let c=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const xi=poly[i][0],yi=poly[i][1],xj=poly[j][0],yj=poly[j][1];if(((yi>y)!=(yj>y))&&(x<(xj-xi)*(y-yi)/(yj-yi)+xi))c=!c;}return c;}
+const inAny=(x,y,polys)=>polys.some(p=>pip(x,y,p));
+function interiorPts(bed){const polys=polysFt(bed);const[w,h]=bedSizeFt(bed);const step=Math.max(0.7,Math.min(w,h)/6);const pts=[];for(let yy=step*0.55;yy<h;yy+=step)for(let xx=step*0.55;xx<w;xx+=step)if(inAny(xx,yy,polys))pts.push([xx,yy]);if(!pts.length){const a=polys[0];let cx=0,cy=0;a.forEach(p=>{cx+=p[0];cy+=p[1];});pts.push([cx/a.length,cy/a.length]);}return pts;}
+function nearestPt(x,y,pts){let best=pts[0],bd=1e9;pts.forEach(p=>{const d=(p[0]-x)**2+(p[1]-y)**2;if(d<bd){bd=d;best=p;}});return best;}
 
-function defaultLayout(bed){
-  const poly=polyFt(bed), [wFt,hFt]=bedSizeFt(bed), ids=RECS[bed.id]||[];
-  const step=Math.max(0.7, Math.min(wFt,hFt)/6), pts=[];
-  for(let yy=step*0.6; yy<hFt; yy+=step) for(let xx=step*0.6; xx<wFt; xx+=step)
-    if(pointInPoly(xx,yy,poly)) pts.push([xx,yy]);
-  const cen=centroidFt(poly);
-  return ids.map((pid,i)=>{
-    let pos = pts.length ? pts[Math.round(i*(pts.length-1)/Math.max(1,ids.length-1))] : cen;
-    return {pid, x:pos[0]+(Math.random()-.5)*step*.4, y:pos[1]+(Math.random()-.5)*step*.4};
-  });
-}
-function ensureLayout(id){ if(!state.layouts[id]) { state.layouts[id]=defaultLayout(bedById(id)); save(); } return state.layouts[id]; }
+function defaultLayout(bed){const pts=interiorPts(bed);const ids=RECS[bed.id]||[];const step=Math.max(.3,(pts.length>1?0.5:0));return ids.map((pid,i)=>{const pos=pts[Math.round(i*(pts.length-1)/Math.max(1,ids.length-1))]||pts[0];return{pid,x:pos[0]+(Math.random()-.5)*step,y:pos[1]+(Math.random()-.5)*step};});}
+function ensureLayout(id){if(!state.layouts[id]){state.layouts[id]=defaultLayout(bedById(id));save();}return state.layouts[id];}
 
-/* ---------- build clickable site plan ---------- */
 function buildOverlay(){
   const ov=document.getElementById('overlay');
   BEDS.forEach(bed=>{
-    const b=bbox(bed.points_px);
-    const poly=document.createElementNS(SVGNS,'polygon');
-    poly.setAttribute('points', bed.points_px.map(p=>p.join(',')).join(' '));
-    poly.setAttribute('class','bed'); poly.style.setProperty('--bc',bed.color);
-    poly.setAttribute('tabindex','0'); poly.setAttribute('role','button');
-    poly.setAttribute('aria-label',bed.name);
-    poly.addEventListener('click',()=>selectBed(bed.id));
-    poly.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){e.preventDefault();selectBed(bed.id);} });
+    bed.polygons.forEach(poly=>{
+      const el=document.createElementNS(SVGNS,'polygon');
+      el.setAttribute('points',poly.map(p=>p.join(',')).join(' '));
+      el.setAttribute('class','bed'); el.style.setProperty('--bc',bed.color);
+      el.dataset.bed=bed.id; el.setAttribute('tabindex','0'); el.setAttribute('role','button'); el.setAttribute('aria-label',bed.name);
+      el.addEventListener('click',()=>selectBed(bed.id));
+      el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();selectBed(bed.id);}});
+      el.addEventListener('mouseenter',()=>tagFor(bed.id,true));
+      el.addEventListener('mouseleave',()=>{ if(sel.bed!==bed.id) tagFor(bed.id,false);});
+      ov.appendChild(el);
+    });
+    const b=bbox(allPts(bed));
     const tag=document.createElementNS(SVGNS,'text');
     tag.setAttribute('x',(b.x0+b.x1)/2); tag.setAttribute('y',(b.y0+b.y1)/2);
-    tag.setAttribute('text-anchor','middle'); tag.setAttribute('class','tag');
-    tag.setAttribute('font-size','34'); tag.textContent=bed.name;
-    ov.appendChild(poly); ov.appendChild(tag);
-    poly._tag=tag;
+    tag.setAttribute('text-anchor','middle'); tag.setAttribute('class','tag'); tag.dataset.bed=bed.id;
+    tag.setAttribute('font-size','34'); tag.textContent=bed.name; ov.appendChild(tag);
   });
 }
+function tagFor(id,on){const t=document.querySelector(`text.tag[data-bed="${id}"]`); if(t)t.classList.toggle('show',on);}
 
-/* ---------- detail panel ---------- */
 function selectBed(id){
   sel.bed=id; sel.plant=null; ensureLayout(id);
-  document.querySelectorAll('.bed').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.tag').forEach(t=>t.classList.remove('show'));
-  const idx=BEDS.findIndex(b=>b.id===id);
-  const polys=document.querySelectorAll('.bed');
-  polys[idx].classList.add('active'); polys[idx]._tag.classList.add('show');
+  document.querySelectorAll('.bed').forEach(p=>p.classList.toggle('active',p.dataset.bed===id));
+  document.querySelectorAll('.tag').forEach(t=>t.classList.toggle('show',t.dataset.bed===id));
   renderDetail();
   document.getElementById('detail').scrollIntoView({behavior:'smooth',block:'start'});
-}
-
-function renderDetail(){
-  const bed=bedById(sel.bed); const det=document.getElementById('detail');
-  const [wFt,hFt]=bedSizeFt(bed);
-  det.innerHTML='';
-  const panel=document.createElement('div'); panel.className='panel'; panel.style.setProperty('--bc',bed.color);
-  panel.innerHTML=`
-    <div class="phead">
-      <div class="dot"></div>
-      <div class="htxt">
-        <h2>${bed.name}</h2>
-        <div class="facts"><b>${bed.area_sqft} sq ft</b> · about ${wFt.toFixed(0)}×${hFt.toFixed(0)} ft · ${bed.edges_ft.length} sides
-          &nbsp;<span class="lightpill">☀ ${bed.light}</span></div>
-        <div class="blurb">${bed.blurb}</div>
-      </div>
-      <button class="close" title="Close" aria-label="Close">×</button>
-    </div>
-    <div class="body">
-      <div class="stage">
-        <div class="cap"><span>Drag plants to arrange them</span><button class="btn ghost" id="resetBed">Reset to suggested</button></div>
-        <div class="svgwrap"><svg class="schem" id="schem"></svg></div>
-      </div>
-      <div class="side">
-        <h3>Plants in this bed</h3>
-        <ul class="plist" id="plist"></ul>
-        <div id="selctrl"></div>
-        <div class="ctrls">
-          <div>
-            <label for="addsel">Add a plant</label>
-            <div class="row2">
-              <div><select id="addsel"></select></div>
-              <button class="btn" id="addbtn">Add</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>`;
-  det.appendChild(panel);
-  panel.querySelector('.close').onclick=closeDetail;
-  panel.querySelector('#resetBed').onclick=()=>{ state.layouts[bed.id]=defaultLayout(bed); sel.plant=null; save(); renderDetail(); };
-  fillAddSelect(panel.querySelector('#addsel'));
-  panel.querySelector('#addbtn').onclick=()=>{
-    const pid=panel.querySelector('#addsel').value; const poly=polyFt(bed); const c=centroidFt(poly);
-    state.layouts[bed.id].push({pid,x:c[0],y:c[1]}); sel.plant=state.layouts[bed.id].length-1; save(); renderDetail();
-  };
-  renderSchem(); renderList();
 }
 function closeDetail(){
   sel.bed=null; sel.plant=null;
@@ -253,94 +194,87 @@ function closeDetail(){
   document.getElementById('detail').innerHTML='<div class="empty"><b>No bed selected.</b><br>Tap any colored bed on the plan above to start planting.</div>';
 }
 
+function renderDetail(){
+  const bed=bedById(sel.bed); const det=document.getElementById('detail'); const[wFt,hFt]=bedSizeFt(bed);
+  const multiNote = bed.multi ? ' · two connected beds' : '';
+  det.innerHTML='';
+  const panel=document.createElement('div'); panel.className='panel'; panel.style.setProperty('--bc',bed.color);
+  panel.innerHTML=`
+    <div class="phead">
+      <div class="dot"></div>
+      <div class="htxt">
+        <h2>${bed.name}</h2>
+        <div class="facts"><b>${bed.area_sqft} sq ft</b> · about ${wFt.toFixed(0)}×${hFt.toFixed(0)} ft${multiNote}
+          &nbsp;<span class="lightpill">☀ ${bed.light}</span></div>
+        <div class="blurb">${bed.blurb}</div>
+      </div>
+      <button class="close" title="Close" aria-label="Close">×</button>
+    </div>
+    <div class="body">
+      <div class="stage">
+        <div class="cap"><span>Drag plants to arrange them${bed.multi?' — they move freely between both beds':''}</span><button class="btn ghost" id="resetBed">Reset to suggested</button></div>
+        <div class="svgwrap"><svg class="schem" id="schem"></svg></div>
+      </div>
+      <div class="side">
+        <h3>Plants in this bed</h3>
+        <ul class="plist" id="plist"></ul>
+        <div id="selctrl"></div>
+        <div class="ctrls"><div><label for="addsel">Add a plant</label>
+          <div class="row2"><div><select id="addsel"></select></div><button class="btn" id="addbtn">Add</button></div></div></div>
+      </div>
+    </div>`;
+  det.appendChild(panel);
+  panel.querySelector('.close').onclick=closeDetail;
+  panel.querySelector('#resetBed').onclick=()=>{state.layouts[bed.id]=defaultLayout(bed);sel.plant=null;save();renderDetail();};
+  fillSelect(panel.querySelector('#addsel'),null);
+  panel.querySelector('#addbtn').onclick=()=>{const pid=panel.querySelector('#addsel').value;const pts=interiorPts(bed);const c=pts[Math.floor(pts.length/2)];state.layouts[bed.id].push({pid,x:c[0],y:c[1]});sel.plant=state.layouts[bed.id].length-1;save();renderDetail();};
+  renderSchem(); renderList();
+}
+
 function renderSchem(){
-  const bed=bedById(sel.bed); const [wFt,hFt]=bedSizeFt(bed); const poly=polyFt(bed);
+  const bed=bedById(sel.bed); const[wFt,hFt]=bedSizeFt(bed); const polys=polysFt(bed);
   const svg=document.getElementById('schem'); const pad=1.2;
-  svg.setAttribute('viewBox',`${-pad} ${-pad} ${wFt+2*pad} ${hFt+2*pad}`);
-  svg.style.maxHeight='430px';
-  svg.innerHTML='';
-  const shape=document.createElementNS(SVGNS,'polygon');
-  shape.setAttribute('points',poly.map(p=>p.join(',')).join(' '));
-  shape.setAttribute('class','bedshape'); shape.style.setProperty('--bc',bed.color);
-  shape.setAttribute('vector-effect','non-scaling-stroke'); shape.setAttribute('stroke-width','1.5');
-  svg.appendChild(shape);
-  const fs=Math.max(0.42, Math.min(wFt,hFt)*0.05);
-  const lay=state.layouts[bed.id];
-  lay.forEach((it,i)=>{
-    const pl=PLANTS[it.pid]; const r=Math.max(0.55, pl.spread/2);
-    const g=document.createElementNS(SVGNS,'g'); g.setAttribute('class','tok'+(i===sel.plant?' sel':''));
-    g.setAttribute('transform',`translate(${it.x},${it.y})`); g.dataset.i=i;
-    const ring=document.createElementNS(SVGNS,'circle'); ring.setAttribute('class','ring');
-    ring.setAttribute('r',r+0.35); ring.setAttribute('vector-effect','non-scaling-stroke'); ring.setAttribute('stroke-width','1.5');
-    const c=document.createElementNS(SVGNS,'circle'); c.setAttribute('class','body');
-    c.setAttribute('r',r); c.setAttribute('fill',pl.color); c.setAttribute('vector-effect','non-scaling-stroke'); c.setAttribute('stroke-width','1.5');
-    const t=document.createElementNS(SVGNS,'text'); t.setAttribute('font-size',Math.min(fs,r*0.95)); t.textContent=abbr(pl.name);
-    g.appendChild(ring); g.appendChild(c); g.appendChild(t);
-    g.addEventListener('pointerdown',startDrag);
-    svg.appendChild(g);
-  });
+  svg.setAttribute('viewBox',`${-pad} ${-pad} ${wFt+2*pad} ${hFt+2*pad}`); svg.style.maxHeight='430px'; svg.innerHTML='';
+  polys.forEach(poly=>{const sh=document.createElementNS(SVGNS,'polygon');sh.setAttribute('points',poly.map(p=>p.join(',')).join(' '));sh.setAttribute('class','bedshape');sh.style.setProperty('--bc',bed.color);sh.setAttribute('vector-effect','non-scaling-stroke');sh.setAttribute('stroke-width','1.5');svg.appendChild(sh);});
+  const fs=Math.max(0.42,Math.min(wFt,hFt)*0.05); const lay=state.layouts[bed.id];
+  lay.forEach((it,i)=>{const pl=PLANTS[it.pid];const r=Math.max(0.55,pl.spread/2);
+    const g=document.createElementNS(SVGNS,'g');g.setAttribute('class','tok'+(i===sel.plant?' sel':''));g.setAttribute('transform',`translate(${it.x},${it.y})`);g.dataset.i=i;
+    const ring=document.createElementNS(SVGNS,'circle');ring.setAttribute('class','ring');ring.setAttribute('r',r+0.35);ring.setAttribute('vector-effect','non-scaling-stroke');ring.setAttribute('stroke-width','1.5');
+    const c=document.createElementNS(SVGNS,'circle');c.setAttribute('class','body');c.setAttribute('r',r);c.setAttribute('fill',pl.color);c.setAttribute('vector-effect','non-scaling-stroke');c.setAttribute('stroke-width','1.5');
+    const t=document.createElementNS(SVGNS,'text');t.setAttribute('font-size',Math.min(fs,r*0.95));t.textContent=abbr(pl.name);
+    g.appendChild(ring);g.appendChild(c);g.appendChild(t);g.addEventListener('pointerdown',startDrag);svg.appendChild(g);});
 }
 
 let drag=null;
-function svgPt(svg,e){ const r=svg.getBoundingClientRect(); const vb=svg.viewBox.baseVal;
-  return [vb.x+(e.clientX-r.left)/r.width*vb.width, vb.y+(e.clientY-r.top)/r.height*vb.height]; }
-function startDrag(e){
-  e.preventDefault(); const g=e.currentTarget; const i=+g.dataset.i;
-  sel.plant=i; renderList(); markSel();
-  const svg=document.getElementById('schem'); const [px,py]=svgPt(svg,e);
-  const it=state.layouts[sel.bed][i]; drag={i,svg,dx:px-it.x,dy:py-it.y};
-  g.setPointerCapture(e.pointerId);
-  g.addEventListener('pointermove',onDrag); g.addEventListener('pointerup',endDrag); g.addEventListener('pointercancel',endDrag);
-}
-function onDrag(e){ if(!drag) return; const [px,py]=svgPt(drag.svg,e);
-  const bed=bedById(sel.bed); const poly=polyFt(bed);
-  let nx=px-drag.dx, ny=py-drag.dy;
-  if(pointInPoly(nx,ny,poly)){ const it=state.layouts[sel.bed][drag.i]; it.x=nx; it.y=ny;
-    e.currentTarget.setAttribute('transform',`translate(${nx},${ny})`); } }
-function endDrag(e){ if(!drag) return; const g=e.currentTarget;
-  g.removeEventListener('pointermove',onDrag); g.removeEventListener('pointerup',endDrag); g.removeEventListener('pointercancel',endDrag);
-  drag=null; save(); }
-
-function markSel(){ document.querySelectorAll('#schem .tok').forEach(g=>g.classList.toggle('sel',+g.dataset.i===sel.plant)); }
+function svgPt(svg,e){const r=svg.getBoundingClientRect();const vb=svg.viewBox.baseVal;return[vb.x+(e.clientX-r.left)/r.width*vb.width,vb.y+(e.clientY-r.top)/r.height*vb.height];}
+function startDrag(e){e.preventDefault();const g=e.currentTarget;const i=+g.dataset.i;sel.plant=i;renderList();markSel();
+  const svg=document.getElementById('schem');const[px,py]=svgPt(svg,e);const it=state.layouts[sel.bed][i];drag={i,g,svg,dx:px-it.x,dy:py-it.y};
+  g.setPointerCapture(e.pointerId);g.addEventListener('pointermove',onDrag);g.addEventListener('pointerup',endDrag);g.addEventListener('pointercancel',endDrag);}
+function onDrag(e){if(!drag)return;const[px,py]=svgPt(drag.svg,e);const it=state.layouts[sel.bed][drag.i];it.x=px-drag.dx;it.y=py-drag.dy;drag.g.setAttribute('transform',`translate(${it.x},${it.y})`);}
+function endDrag(e){if(!drag)return;const g=drag.g;g.removeEventListener('pointermove',onDrag);g.removeEventListener('pointerup',endDrag);g.removeEventListener('pointercancel',endDrag);
+  const bed=bedById(sel.bed);const polys=polysFt(bed);const it=state.layouts[sel.bed][drag.i];
+  if(!inAny(it.x,it.y,polys)){const np=nearestPt(it.x,it.y,interiorPts(bed));it.x=np[0];it.y=np[1];g.setAttribute('transform',`translate(${it.x},${it.y})`);}
+  drag=null;save();}
+function markSel(){document.querySelectorAll('#schem .tok').forEach(g=>g.classList.toggle('sel',+g.dataset.i===sel.plant));}
 
 function renderList(){
-  const bed=bedById(sel.bed); const ul=document.getElementById('plist'); ul.innerHTML='';
-  state.layouts[bed.id].forEach((it,i)=>{
-    const pl=PLANTS[it.pid]; const li=document.createElement('li');
-    li.className='prow'+(i===sel.plant?' sel':'');
-    li.innerHTML=`<span class="sw" style="background:${pl.color}"></span>
-      <span class="nm">${pl.name}</span><span class="meta">${pl.cat}</span>
-      <button class="rm" title="Remove">✕</button>`;
-    li.onclick=ev=>{ if(ev.target.classList.contains('rm')) return; sel.plant=i; renderList(); markSel(); };
-    li.querySelector('.rm').onclick=ev=>{ ev.stopPropagation();
-      state.layouts[bed.id].splice(i,1); if(sel.plant===i) sel.plant=null; else if(sel.plant>i) sel.plant--; save(); renderSchem(); renderList(); };
-    ul.appendChild(li);
-  });
+  const bed=bedById(sel.bed);const ul=document.getElementById('plist');ul.innerHTML='';
+  state.layouts[bed.id].forEach((it,i)=>{const pl=PLANTS[it.pid];const li=document.createElement('li');li.className='prow'+(i===sel.plant?' sel':'');
+    li.innerHTML=`<span class="sw" style="background:${pl.color}"></span><span class="nm">${pl.name}</span><span class="meta">${pl.cat}</span><button class="rm" title="Remove">✕</button>`;
+    li.onclick=ev=>{if(ev.target.classList.contains('rm'))return;sel.plant=i;renderList();markSel();};
+    li.querySelector('.rm').onclick=ev=>{ev.stopPropagation();state.layouts[bed.id].splice(i,1);if(sel.plant===i)sel.plant=null;else if(sel.plant>i)sel.plant--;save();renderSchem();renderList();};
+    ul.appendChild(li);});
   renderSelCtrl();
 }
-function renderSelCtrl(){
-  const box=document.getElementById('selctrl'); if(!box) return;
-  if(sel.plant==null||!state.layouts[sel.bed][sel.plant]){ box.innerHTML=''; return; }
-  const it=state.layouts[sel.bed][sel.plant]; const pl=PLANTS[it.pid];
-  box.innerHTML=`<p class="selnote">Selected: <b>${pl.name}</b> — swap it for something else:</p>
-    <select id="swapsel"></select>`;
-  const s=box.querySelector('#swapsel'); fillPlantSelect(s, it.pid);
-  s.onchange=()=>{ it.pid=s.value; save(); renderSchem(); renderList(); markSel(); };
-}
-function groupedOptions(selected){
-  const cats={}; Object.entries(PLANTS).forEach(([id,p])=>{(cats[p.cat]=cats[p.cat]||[]).push([id,p]);});
-  let html='';
-  Object.keys(cats).sort().forEach(cat=>{ html+=`<optgroup label="${cat}">`;
-    cats[cat].sort((a,b)=>a[1].name.localeCompare(b[1].name)).forEach(([id,p])=>{
-      html+=`<option value="${id}" ${id===selected?'selected':''}>${p.name} · ${p.spread} ft · ${p.light}</option>`; });
-    html+='</optgroup>'; });
-  return html;
-}
-function fillPlantSelect(s,selected){ s.innerHTML=groupedOptions(selected); }
-function fillAddSelect(s){ s.innerHTML=groupedOptions(null); }
+function renderSelCtrl(){const box=document.getElementById('selctrl');if(!box)return;
+  if(sel.plant==null||!state.layouts[sel.bed][sel.plant]){box.innerHTML='';return;}
+  const it=state.layouts[sel.bed][sel.plant];const pl=PLANTS[it.pid];
+  box.innerHTML=`<p class="selnote">Selected: <b>${pl.name}</b> — swap it for something else:</p><select id="swapsel"></select>`;
+  const s=box.querySelector('#swapsel');fillSelect(s,it.pid);s.onchange=()=>{it.pid=s.value;save();renderSchem();renderList();markSel();};}
+function fillSelect(s,selected){const cats={};Object.entries(PLANTS).forEach(([id,p])=>{(cats[p.cat]=cats[p.cat]||[]).push([id,p]);});let h='';Object.keys(cats).sort().forEach(cat=>{h+=`<optgroup label="${cat}">`;cats[cat].sort((a,b)=>a[1].name.localeCompare(b[1].name)).forEach(([id,p])=>{h+=`<option value="${id}" ${id===selected?'selected':''}>${p.name} · ${p.spread} ft · ${p.light}</option>`;});h+='</optgroup>';});s.innerHTML=h;}
 
-/* ---------- init ---------- */
 load(); buildOverlay();
+
 </script>
 </body>
 </html>
