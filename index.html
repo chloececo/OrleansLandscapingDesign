@@ -655,12 +655,12 @@ function elevScallop(pts,ctr,bump,rnd,closed){
 }
 // shrub / mounding perennial: a lobed dome sitting on the soil, with a rounded base
 // that bulges toward the viewer so it reads as a 3D mass, not a flat cutout
-function elevBush(cx,baseY,rx,topH,rnd){
+function elevBush(cx,baseY,rx,topH,rnd,bump){
   const n=Math.max(7,Math.min(15,Math.round(rx*3.2))), pts=[];
   for(let i=0;i<=n;i++){const t=i/n,a=Math.PI*(1-t);const w=1+(rnd()*2-1)*0.06;
     pts.push([cx+Math.cos(a)*rx*w, baseY-Math.sin(a)*topH*w]);}
   pts[0]=[cx-rx,baseY]; pts[n]=[cx+rx,baseY];      // pin the ground contacts
-  const d=elevScallop(pts,[cx,baseY-topH*0.12],0.5,rnd,false);
+  const d=elevScallop(pts,[cx,baseY-topH*0.12],bump==null?0.5:bump,rnd,false);
   const base=rx*0.22;                              // depth of the rounded footprint
   return d+` Q ${cx.toFixed(2)} ${(baseY+base*2).toFixed(2)} ${(cx-rx).toFixed(2)} ${baseY.toFixed(2)} Z`;
 }
@@ -710,6 +710,95 @@ function elevTrunk(cx,by,h,tw){
     `Q ${cx.toFixed(2)} ${(by+dip).toFixed(2)} ${(cx+fl).toFixed(2)} ${by.toFixed(2)} `+      // curved base
     `Q ${(cx+tw*0.6).toFixed(2)} ${by.toFixed(2)} ${(cx+tw/2).toFixed(2)} ${(by-sh).toFixed(2)} `+ // flare in, right
     `L ${(cx+tw/2).toFixed(2)} ${(by-h).toFixed(2)} Z`;
+}
+// ---- Per-species shrub icons (bodies + berries/flowers/spikes), decided in the picker ----
+function elevHash(pid){let h=2166136261>>>0;for(let i=0;i<pid.length;i++){h^=pid.charCodeAt(i);h=Math.imul(h,16777619);}return h>>>0;}
+function elevSeed(n){let h=n>>>0;return function(){h=h+0x6D2B79F5|0;let t=Math.imul(h^h>>>15,1|h);t=t+Math.imul(t^t>>>7,61|t)^t;return ((t^t>>>14)>>>0)/4294967296;};}
+// Poisson-disc fill following the mound outline (even, no rows; clear of the bottom).
+function elevScatter(cx,by,rx,topH,minDist,r,botInset,topInset){
+  const pts=[],md2=minDist*minDist;
+  const inR=(x,y)=>{const fx=Math.max(-1,Math.min(1,x/rx)),ext=Math.sqrt(Math.max(0,1-fx*fx));
+    return x>=-rx&&x<=rx&&y<=by+rx*0.28*(1-fx*fx)-botInset&&y>=by-topH*ext+topInset;};
+  for(let i=0;i<3000;i++){const x=(r()*2-1)*rx,y=by+rx*0.28-r()*(topH+rx*0.28);if(!inR(x,y))continue;
+    const px=cx+x;let ok=true;for(const p of pts){const dx=p[0]-px,dy=p[1]-y;if(dx*dx+dy*dy<md2){ok=false;break;}}if(ok)pts.push([px,y]);}
+  return pts;
+}
+function elevTallblob(cx,by,rx,H,r,bump){const cy=by-H*0.52,ry=H*0.52,n=Math.max(13,Math.round((rx+ry)*2.2)),pts=[];
+  for(let i=0;i<n;i++){const a=(i/n)*Math.PI*2;const w=1+(r()*2-1)*0.05;let x=cx+Math.cos(a)*rx*w,y=cy+Math.sin(a)*ry*w;if(y>by)y=by;pts.push([x,y]);}
+  return elevScallop(pts,[cx,cy],bump==null?0.3:bump,r,true);}
+function elevBox(cx,by,H,r){const cr=H*0.2,w=H*0.82,x0=cx-w/2,x1=cx+w/2,y0=by-H,y1=by,j=H*0.02,jt=()=>(r()*2-1)*j,q=n=>n.toFixed(2);
+  let d=`M ${q(x0+cr)} ${q(y0+jt())} L ${q((x0+x1)/2)} ${q(y0-Math.abs(jt()))} L ${q(x1-cr)} ${q(y0+jt())} `;
+  d+=`Q ${q(x1)} ${q(y0)} ${q(x1+jt())} ${q(y0+cr)} L ${q(x1+jt())} ${q((y0+y1)/2)} L ${q(x1)} ${q(y1-cr)} `;
+  d+=`Q ${q(x1)} ${q(y1)} ${q(x1-cr)} ${q(y1)} Q ${q(cx)} ${q(y1+H*0.06)} ${q(x0+cr)} ${q(y1)} `;
+  d+=`Q ${q(x0)} ${q(y1)} ${q(x0)} ${q(y1-cr)} L ${q(x0+jt())} ${q((y0+y1)/2)} L ${q(x0+jt())} ${q(y0+cr)} `;
+  d+=`Q ${q(x0)} ${q(y0)} ${q(x0+cr)} ${q(y0+jt())} Z`;return d;}
+function elevShFol(d,fill,op,sw){return `<path d="${d}" fill="${fill}" fill-opacity="${op==null?0.92:op}" stroke="rgba(0,0,0,.26)" stroke-width="${sw||1.3}" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;}
+function elevBerriesStr(cx,by,rx,topH,r,col,bsz,gap){const rr=rx*0.044*(bsz||1),pts=elevScatter(cx,by,rx,topH,rx*0.3*(gap||1),r,rx*0.14,rr*1.4);let s='';
+  pts.forEach(p=>{s+=`<circle cx="${p[0].toFixed(2)}" cy="${p[1].toFixed(2)}" r="${rr.toFixed(2)}" fill="${col}" stroke="rgba(0,0,0,.22)" stroke-width=".5" vector-effect="non-scaling-stroke"/>`;});return s;}
+function elevMopStr(cx,by,rx,topH,r,col,sz){const rr=rx*0.17*(sz||1),pts=elevScatter(cx,by,rx,topH,rr*2.5,r,rr*2,0);let s='';
+  pts.forEach(p=>{const ring=[];for(let i=0;i<8;i++){const a=(i/8)*Math.PI*2;ring.push([p[0]+Math.cos(a)*rr,p[1]+Math.sin(a)*rr]);}
+    s+=`<path d="${elevScallop(ring,[p[0],p[1]],0.5,r,true)}" fill="${col}" fill-opacity=".95" stroke="rgba(0,0,0,.18)" stroke-width=".6" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;});return s;}
+function elevConeStr(cx,by,rx,topH,r,col,sz){const w=rx*0.18*(sz||1),h=rx*0.42*(sz||1),pts=elevScatter(cx,by,rx,topH,w*3,r,h*0.9,h*0.5);let s='';
+  const shape=[[0,h*0.42],[w*0.9,h*0.2],[w,-h*0.08],[w*0.5,-h*0.4],[0,-h*0.62],[-w*0.5,-h*0.4],[-w,-h*0.08],[-w*0.9,h*0.2]];
+  pts.forEach(p=>{const ring=shape.map(o=>[p[0]+o[0],p[1]+o[1]]);
+    s+=`<path d="${elevScallop(ring,[p[0],p[1]-h*0.05],0.5,r,true)}" fill="${col}" fill-opacity=".95" stroke="rgba(0,0,0,.18)" stroke-width=".6" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;});return s;}
+function elevFlowersAtStr(pos,cx,gy,rx,topH,r,type,col,sz){const items=pos.map(o=>({px:cx+o.x*rx,py:gy-o.y*topH}));let s='';
+  items.sort((a,b)=>a.py-b.py).forEach(it=>{
+    if(type==='cone'){const w=rx*0.18*(sz||1),h=rx*0.42*(sz||1),shape=[[0,h*0.42],[w*0.9,h*0.2],[w,-h*0.08],[w*0.5,-h*0.4],[0,-h*0.62],[-w*0.5,-h*0.4],[-w,-h*0.08],[-w*0.9,h*0.2]];
+      s+=`<path d="${elevScallop(shape.map(o=>[it.px+o[0],it.py+o[1]]),[it.px,it.py-h*0.05],0.5,r,true)}" fill="${col}" fill-opacity=".95" stroke="rgba(0,0,0,.18)" stroke-width=".6" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;}
+    else{const rr=rx*0.17*(sz||1),ring=[];for(let k=0;k<8;k++){const a=(k/8)*Math.PI*2;ring.push([it.px+Math.cos(a)*rr,it.py+Math.sin(a)*rr]);}
+      s+=`<path d="${elevScallop(ring,[it.px,it.py],0.5,r,true)}" fill="${col}" fill-opacity=".95" stroke="rgba(0,0,0,.18)" stroke-width=".6" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;}
+  });return s;}
+const ELEV_SPIKE_PAT=[{x:-0.72,base:0.24,tip:0.94,lean:-0.12},{x:-0.47,base:0.06,tip:0.92,lean:-0.13},{x:-0.30,base:0.42,tip:1.37,lean:-0.09},
+  {x:-0.02,base:0.72,tip:1.61,lean:0.00},{x:0.10,base:0.03,tip:0.79,lean:0.06},{x:0.32,base:0.57,tip:1.43,lean:0.07},{x:0.65,base:0.17,tip:0.90,lean:0.10}];
+function elevConePath(bx,byy,tx,ty,w0,r){const dx=tx-bx,dy=ty-byy,len=Math.hypot(dx,dy)||0.01,ux=dx/len,uy=dy/len,px=-uy,py=ux;
+  const widAt=s=>w0*(0.6+0.4*(1-s))*(1-s*0.82),at=(s,a)=>[bx+ux*s*len+px*a,byy+uy*s*len+py*a],nSide=Math.max(3,Math.round(len/(w0*1.15)));
+  const loc=[at(0,0)];for(let k=1;k<=nSide;k++){const s=k/(nSide+1);loc.push(at(s,widAt(s)));}
+  loc.push(at(0.99,w0*0.26));loc.push(at(1,0));loc.push(at(0.99,-w0*0.26));
+  for(let k=nSide;k>=1;k--){const s=k/(nSide+1);loc.push(at(s,-widAt(s)));}return elevScallop(loc,[(bx+tx)/2,(byy+ty)/2],0.5,r,true);}
+function elevSpikesStr(cx,by,bodyRx,bodyTopH,col){const w0=bodyRx*0.11;
+  const items=ELEV_SPIKE_PAT.map(p=>({bx:cx+p.x*bodyRx,baseY:by-p.base*bodyTopH,tx:cx+(p.x+p.lean)*bodyRx,ty:by-p.tip*bodyTopH}));
+  let s='';items.sort((a,b)=>a.baseY-b.baseY).forEach((it,i)=>{s+=`<path d="${elevConePath(it.bx,it.baseY,it.tx,it.ty,w0,elevSeed(500+i*29))}" fill="${col}" fill-opacity=".95" stroke="rgba(0,0,0,.18)" stroke-width=".6" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;});return s;}
+// hand-placed flower layouts (x = frac from center, y = center height as frac of body height)
+const ELEV_POS={
+ viburnum:[{x:-0.9,y:0.15},{x:-0.64,y:0.67},{x:-0.63,y:0.35},{x:-0.41,y:0.07},{x:-0.28,y:0.58},{x:-0.17,y:0.91},{x:-0.13,y:0.32},{x:0.15,y:0.13},{x:0.18,y:0.5},{x:0.26,y:0.85},{x:0.49,y:0.29},{x:0.51,y:0.68},{x:0.72,y:0.07},{x:0.74,y:0.48},{x:1.01,y:0.27}],
+ oakleaf:[{x:-0.66,y:0.39},{x:-0.31,y:0.78},{x:-0.21,y:0.14},{x:0.23,y:0.42},{x:0.41,y:0.8},{x:0.8,y:0.24}],
+ beachplum:[{x:-0.88,y:0.48},{x:-0.71,y:0.3},{x:-0.71,y:0.8},{x:-0.64,y:0.65},{x:-0.58,y:0.42},{x:-0.4,y:0.26},{x:-0.4,y:0.87},{x:-0.4,y:0.13},{x:-0.34,y:0.72},{x:-0.25,y:0.57},{x:-0.24,y:0.98},{x:-0.23,y:0.4},{x:-0.07,y:0.18},{x:0.08,y:0.83},{x:0.13,y:0.33},{x:0.15,y:0.62},{x:0.17,y:0.96},{x:0.23,y:0.48},{x:0.29,y:0.13},{x:0.36,y:0.74},{x:0.53,y:0.4},{x:0.53,y:0.25},{x:0.59,y:0.84},{x:0.61,y:0.54},{x:0.73,y:0.68},{x:0.88,y:0.43}]
+};
+const ELEV_SHRUB={
+ boxwood:{body:'box'}, arborvitae:{body:'columnar'},
+ holly:{body:'tight',ac:'berry',col:'#c1402f',bsz:1.584,gap:1.6},
+ inkberry:{body:'tight',ac:'berry',col:'#39264a'},
+ hydrangea:{body:'loose',ac:'mophead',col:'#8fb3e0',sz:1.35,th:1.18,fc:'#6f9e6a',fseed:1800},
+ oakleafhydrangea:{body:'tight',ac:'cone',col:'#eef0e6',sz:1.0,pos:'oakleaf'},
+ rhododendron:{body:'tight',ac:'mophead',col:'#dd9bbd',sz:1.3},
+ spirea:{body:'loose',ac:'mophead',col:'#dd9bbd',sz:0.68},
+ viburnum:{body:'upright',ac:'cone',col:'#eef0e6',sz:0.68,pos:'viburnum'},
+ sweetpepperbush:{body:'spike',col:'#ded9c6'},
+ winterberry:{body:'upright',ac:'berry',col:'#c1402f'},
+ bayberry:{body:'loose'},
+ highbushblueberry:{body:'tight',ac:'berry',col:'#4a6b9e'},
+ beachplum:{body:'columnar',ac:'mophead',col:'#eef0e6',sz:0.68,pos:'beachplum'},
+ sweetfern:{body:'loose'},
+ chokeberry:{body:'upright',ac:'berry',col:'#39264a',bsz:1.584},
+ shadbush:{body:'upright',ac:'mophead',col:'#eef0e6',sz:0.75},
+ newjerseytea:{body:'loose',ac:'mophead',col:'#eef0e6',sz:0.68},
+ butterflybush:{body:'spike',col:'#8e6fbf'}
+};
+function elevShrubMarkup(it,cx,gy,rx,ch,rnd){
+  const cfg=ELEV_SHRUB[it.pid]; if(!cfg) return '';
+  const fc=cfg.fc||'#5f8a4f', bh=cfg.th?rx*cfg.th:ch;
+  const ar=cfg.fseed!=null?elevSeed(cfg.fseed):elevSeed(elevHash(it.pid)+11);
+  let s='';
+  if(cfg.body==='box') s+=elevShFol(elevBox(cx,gy,ch,rnd),fc);
+  else if(cfg.body==='columnar') s+=elevShFol(elevTallblob(cx,gy,rx,ch,rnd,0.3),fc);
+  else if(cfg.body==='spike'){const tb=ch/1.61;s+=elevShFol(elevBush(cx,gy,rx,tb,rnd,0.5),fc);s+=elevSpikesStr(cx,gy,rx,tb,cfg.col);}
+  else s+=elevShFol(elevBush(cx,gy,rx,bh,rnd,cfg.body==='tight'?0.3:0.5),fc);
+  if(cfg.pos) s+=elevFlowersAtStr(ELEV_POS[cfg.pos],cx,gy,rx,bh,ar,cfg.ac,cfg.col,cfg.sz);
+  else if(cfg.ac==='berry') s+=elevBerriesStr(cx,gy,rx,bh,ar,cfg.col,cfg.bsz,cfg.gap);
+  else if(cfg.ac==='mophead') s+=elevMopStr(cx,gy,rx,bh,ar,cfg.col,cfg.sz);
+  else if(cfg.ac==='cone') s+=elevConeStr(cx,gy,rx,bh,ar,cfg.col,cfg.sz);
+  return s;
 }
 function drawElevation(svg,bed,lay,view,topH){
   const axis=view.axis;
@@ -781,6 +870,9 @@ function drawElevation(svg,bed,lay,view,topH){
         bl.setAttribute('d',elevGrassBlades(baseX,baseY,rx,topH,rnd));
         bl.setAttribute('fill','none');bl.setAttribute('stroke',elevDarken(pl.color,0.3));
         bl.setAttribute('stroke-width','1.8');bl.setAttribute('stroke-linecap','round');bl.setAttribute('vector-effect','non-scaling-stroke');g.appendChild(bl);
+      }else if(pl.cat==='Shrub' && ELEV_SHRUB[it.pid]){
+        const frag=document.createElementNS(SVGNS,'g'); frag.innerHTML=elevShrubMarkup(it,baseX,baseY,rx,ch,rnd);
+        while(frag.firstChild) g.appendChild(frag.firstChild);
       }else{
         const p=document.createElementNS(SVGNS,'path');
         p.setAttribute('d', elevBush(baseX,baseY,rx,ch*1.1,rnd));
