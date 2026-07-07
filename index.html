@@ -671,6 +671,19 @@ function elevBlob(cx,cy,rx,ry,rnd){
     pts.push([cx+Math.cos(a)*rx*w, cy+Math.sin(a)*ry*w]);}
   return elevScallop(pts,[cx,cy],0.52,rnd,true);
 }
+// tapered curved trunk (multi-stem serviceberry): quadratic base->control->tip, width tapering base->tip
+function elevTaperStem(B,C,T,wb,wtip){
+  const N=12,L=[],R=[],q=n=>n.toFixed(2);
+  for(let i=0;i<=N;i++){const t=i/N,u=1-t;
+    const x=u*u*B[0]+2*u*t*C[0]+t*t*T[0], y=u*u*B[1]+2*u*t*C[1]+t*t*T[1];
+    const dx=2*u*(C[0]-B[0])+2*t*(T[0]-C[0]), dy=2*u*(C[1]-B[1])+2*t*(T[1]-C[1]);
+    const len=Math.hypot(dx,dy)||1,px=-dy/len,py=dx/len,w=(wb*(1-t)+wtip*t)/2;
+    L.push([x+px*w,y+py*w]);R.push([x-px*w,y-py*w]);}
+  let d=`M ${q(L[0][0])} ${q(L[0][1])}`;
+  for(let i=1;i<=N;i++)d+=` L ${q(L[i][0])} ${q(L[i][1])}`;
+  for(let i=N;i>=0;i--)d+=` L ${q(R[i][0])} ${q(R[i][1])}`;
+  return d+" Z";
+}
 // Grass: a spray of fine arching blades rising from a small curved base tuft, so the
 // clump reads as sitting in the soil. Bases ride a downward arc (center, nearest the
 // viewer, dips lowest). Drawn as two parts: a faint filled tuft + stroked blades.
@@ -763,7 +776,12 @@ function elevSpikesStr(cx,by,bodyRx,bodyTopH,col){const w0=bodyTopH*0.141;   // 
 const ELEV_POS={
  viburnum:[{x:-0.9,y:0.15},{x:-0.64,y:0.67},{x:-0.63,y:0.35},{x:-0.41,y:0.07},{x:-0.28,y:0.58},{x:-0.17,y:0.91},{x:-0.13,y:0.32},{x:0.15,y:0.13},{x:0.18,y:0.5},{x:0.26,y:0.85},{x:0.49,y:0.29},{x:0.51,y:0.68},{x:0.72,y:0.07},{x:0.74,y:0.48},{x:1.01,y:0.27}],
  oakleaf:[{x:-0.66,y:0.39},{x:-0.31,y:0.78},{x:-0.21,y:0.14},{x:0.23,y:0.42},{x:0.41,y:0.8},{x:0.8,y:0.24}],
- beachplum:[{x:-0.88,y:0.48},{x:-0.71,y:0.3},{x:-0.71,y:0.8},{x:-0.64,y:0.65},{x:-0.58,y:0.42},{x:-0.4,y:0.26},{x:-0.4,y:0.87},{x:-0.4,y:0.13},{x:-0.34,y:0.72},{x:-0.25,y:0.57},{x:-0.24,y:0.98},{x:-0.23,y:0.4},{x:-0.07,y:0.18},{x:0.08,y:0.83},{x:0.13,y:0.33},{x:0.15,y:0.62},{x:0.17,y:0.96},{x:0.23,y:0.48},{x:0.29,y:0.13},{x:0.36,y:0.74},{x:0.53,y:0.4},{x:0.53,y:0.25},{x:0.59,y:0.84},{x:0.61,y:0.54},{x:0.73,y:0.68},{x:0.88,y:0.43}]
+ beachplum:[{x:-0.88,y:0.48},{x:-0.71,y:0.3},{x:-0.71,y:0.8},{x:-0.64,y:0.65},{x:-0.58,y:0.42},{x:-0.4,y:0.26},{x:-0.4,y:0.87},{x:-0.4,y:0.13},{x:-0.34,y:0.72},{x:-0.25,y:0.57},{x:-0.24,y:0.98},{x:-0.23,y:0.4},{x:-0.07,y:0.18},{x:0.08,y:0.83},{x:0.13,y:0.33},{x:0.15,y:0.62},{x:0.17,y:0.96},{x:0.23,y:0.48},{x:0.29,y:0.13},{x:0.36,y:0.74},{x:0.53,y:0.4},{x:0.53,y:0.25},{x:0.59,y:0.84},{x:0.61,y:0.54},{x:0.73,y:0.68},{x:0.88,y:0.43}],
+ shadbush:[{x:-0.86,y:0.59},{x:-0.84,y:0.7},{x:-0.69,y:0.8},{x:-0.66,y:0.49},{x:-0.57,y:0.9},{x:-0.38,y:0.67},{x:-0.26,y:0.8},{x:-0.25,y:0.57},{x:-0.24,y:0.45},{x:-0.11,y:0.96},{x:0.01,y:0.34},{x:0.07,y:0.72},{x:0.14,y:0.86},{x:0.22,y:0.49},{x:0.23,y:0.62},{x:0.36,y:0.94},{x:0.52,y:0.75},{x:0.66,y:0.84},{x:0.72,y:0.51},{x:0.77,y:0.66}]
+};
+// multi-stem serviceberry trunks — {b:base, c:curve, t:tip}, x = frac of half-width, y = frac of height
+const ELEV_STEMS={
+ shadbush:[{b:[-0.09,0],c:[-0.45,0.29],t:[-0.72,0.43]},{b:[-0.06,0],c:[-0.28,0.21],t:[-0.29,0.36]},{b:[0.02,0],c:[0.01,0.11],t:[0.01,0.34]},{b:[0.04,0],c:[0.22,0.25],t:[0.23,0.36]},{b:[0.11,0],c:[0.42,0.21],t:[0.49,0.41]}]
 };
 const ELEV_SHRUB={
  boxwood:{body:'box'}, arborvitae:{body:'columnar'},
@@ -781,7 +799,7 @@ const ELEV_SHRUB={
  beachplum:{body:'columnar',ac:'mophead',col:'#eef0e6',sz:0.68,pos:'beachplum'},
  sweetfern:{body:'loose'},
  chokeberry:{body:'upright',ac:'berry',col:'#39264a',bsz:1.584},
- shadbush:{body:'upright',ac:'mophead',col:'#eef0e6',sz:0.75},
+ shadbush:{body:'multistem',ac:'mophead',col:'#eef0e6',sz:1.1,pos:'shadbush',trunk:0.3},
  newjerseytea:{body:'loose',ac:'mophead',col:'#eef0e6',sz:0.68},
  butterflybush:{body:'spike',col:'#8e6fbf'}
 };
@@ -793,6 +811,10 @@ function elevShrubMarkup(it,cx,gy,rx,ch,rnd){
   if(cfg.body==='box') s+=elevShFol(elevBox(cx,gy,ch,rnd),fc);
   else if(cfg.body==='columnar') s+=elevShFol(elevTallblob(cx,gy,rx,ch,rnd,0.3),fc);
   else if(cfg.body==='spike'){const tb=ch/1.61;s+=elevShFol(elevBush(cx,gy,rx,tb,rnd,0.5),fc);s+=elevSpikesStr(cx,gy,rx,tb,cfg.col);}  // full-height mound; cones stay fat (non-pointy) via width-from-length in elevSpikesStr
+  else if(cfg.body==='multistem'){const tf=cfg.trunk||0.3,ccy=gy-ch*(tf+(1-tf)/2),cry=ch*(1-tf)/2;  // bare fanning trunks + lobed crown lifted above them
+    (ELEV_STEMS[it.pid]||[]).forEach(st=>{const B=[cx+st.b[0]*rx,gy-st.b[1]*ch],C=[cx+st.c[0]*rx,gy-st.c[1]*ch],T=[cx+st.t[0]*rx,gy-st.t[1]*ch];
+      s+=`<path d="${elevTaperStem(B,C,T,rx*0.11,rx*0.02)}" fill="#8a6b4a" fill-opacity=".95" stroke="rgba(0,0,0,.28)" stroke-width=".8" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;});
+    s+=elevShFol(elevBlob(cx,ccy,rx,cry,rnd),fc);}
   else s+=elevShFol(elevBush(cx,gy,rx,bh,rnd,cfg.body==='tight'?0.3:0.5),fc);
   if(cfg.pos) s+=elevFlowersAtStr(ELEV_POS[cfg.pos],cx,gy,rx,bh,ar,cfg.ac,cfg.col,cfg.sz);
   else if(cfg.ac==='berry') s+=elevBerriesStr(cx,gy,rx,bh,ar,cfg.col,cfg.bsz,cfg.gap);
