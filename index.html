@@ -792,7 +792,7 @@ function elevShrubMarkup(it,cx,gy,rx,ch,rnd){
   let s='';
   if(cfg.body==='box') s+=elevShFol(elevBox(cx,gy,ch,rnd),fc);
   else if(cfg.body==='columnar') s+=elevShFol(elevTallblob(cx,gy,rx,ch,rnd,0.3),fc);
-  else if(cfg.body==='spike'){const tb=ch/1.61;s+=elevShFol(elevBush(cx,gy,rx,tb,rnd,0.5),fc);s+=elevSpikesStr(cx,gy,rx,tb,cfg.col);}
+  else if(cfg.body==='spike'){const tb=rx*0.78;s+=elevShFol(elevBush(cx,gy,rx,tb,rnd,0.5),fc);s+=elevSpikesStr(cx,gy,rx,tb,cfg.col);}  // picker's low-mound proportion (scale from width, not full height) → fat short cones, not pointy
   else s+=elevShFol(elevBush(cx,gy,rx,bh,rnd,cfg.body==='tight'?0.3:0.5),fc);
   if(cfg.pos) s+=elevFlowersAtStr(ELEV_POS[cfg.pos],cx,gy,rx,bh,ar,cfg.ac,cfg.col,cfg.sz);
   else if(cfg.ac==='berry') s+=elevBerriesStr(cx,gy,rx,bh,ar,cfg.col,cfg.bsz,cfg.gap);
