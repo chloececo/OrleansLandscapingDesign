@@ -852,17 +852,39 @@ function elevDill(cx,baseY,rx,topH,rnd,fill,stk,flw){
       s+=`<circle cx="${q(sx)}" cy="${q(sy)}" r="${q(rx*0.08)}" fill="${flw}" stroke="${stk}" stroke-width="0.4" vector-effect="non-scaling-stroke"/>`;}}
   return s;
 }
-// pid → config; only these four herbs override the generic bush (ll/lw are fractions of height/half-width)
+// thyme: a low creeping mound flecked with tiny flowers
+function elevHerbMat(cx,baseY,rx,topH,rnd,fill,stk,flw){
+  const th=Math.min(topH,rx*0.55),nb=Math.max(11,Math.round(rx*1.1)),pts=[],f=v=>v.toFixed(2);
+  for(let i=0;i<=nb;i++){const a=Math.PI*(1-i/nb),w=1+(rnd()*2-1)*0.05;pts.push([cx+Math.cos(a)*rx*1.15*w,baseY-Math.sin(a)*th*w]);}
+  pts[0]=[cx-rx*1.15,baseY];pts[nb]=[cx+rx*1.15,baseY];
+  let s=`<path d="${elevScallop(pts,[cx,baseY],0.65,rnd,false)} L ${f(cx-rx*1.15)} ${f(baseY)} Z" fill="${fill}" fill-opacity="0.9" stroke="${stk}" stroke-width="1" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
+  for(let i=0;i<10;i++){s+=`<circle cx="${f(cx+(rnd()*2-1)*rx*1.02)}" cy="${f(baseY-rnd()*th*0.9)}" r="${f(rx*0.08)}" fill="${flw}"/>`;}
+  return s;
+}
+// chives: a grassy tuft of blades tipped with round flower heads
+function elevHerbChive(cx,baseY,rx,topH,rnd,bladeStk,headCol,headStk){
+  let s='';const nb=9,f=v=>v.toFixed(2);
+  for(let i=0;i<nb;i++){const t=(i/(nb-1))*2-1,bx=cx+t*rx*0.28,
+    h=topH*(0.72+0.28*(1-Math.abs(t)))*(0.86+rnd()*0.2),tipX=cx+t*rx,tipY=baseY-h;
+    s+=`<path d="M ${f(bx)} ${f(baseY)} Q ${f(cx+t*rx*0.45)} ${f(baseY-h*0.8)} ${f(tipX)} ${f(tipY)}" fill="none" stroke="${bladeStk}" stroke-width="1.5" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`;
+    if(i%2===0)s+=`<circle cx="${f(tipX)}" cy="${f(tipY)}" r="${f(rx*0.16)}" fill="${headCol}" stroke="${headStk}" stroke-width="0.6" vector-effect="non-scaling-stroke"/>`;}
+  return s;
+}
+// pid → config; only these herbs override the generic bush (ll/lw are fractions of height/half-width)
 const ELEV_HERB={
   basil:{style:'almond',ll:0.24,lw:0.32},
   sage:{style:'almond',ll:0.34,lw:0.22},
   mint:{style:'scallop',ll:0.24,lw:0.32},
-  dill:{dill:true,flw:'#e6d15a'}
+  dill:{dill:true,flw:'#e6d15a'},
+  thyme:{mat:true,flw:'#b79fd0'},
+  chives:{chive:true}
 };
 function elevHerbMarkup(it,cx,gy,rx,ch,rnd){
   const cfg=ELEV_HERB[it.pid]; if(!cfg) return '';
   const pl=PLANTS[it.pid],fill=pl.color,stk=elevDarken(pl.color,0.42);
   if(cfg.dill) return elevDill(cx,gy,rx,ch,rnd,fill,stk,cfg.flw);
+  if(cfg.mat) return elevHerbMat(cx,gy,rx,ch,rnd,fill,stk,cfg.flw);
+  if(cfg.chive) return elevHerbChive(cx,gy,rx,ch,rnd,'#6f9457',pl.color,elevDarken(pl.color,0.3));  // green blades, data-color flower heads
   return elevHerbStem(cx,gy,rx,ch,rnd,cfg.style,ch*cfg.ll,rx*cfg.lw,fill,stk);
 }
 function drawElevation(svg,bed,lay,view,topH){
