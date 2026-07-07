@@ -756,7 +756,7 @@ function elevConePath(bx,byy,tx,ty,w0,r){const dx=tx-bx,dy=ty-byy,len=Math.hypot
   const loc=[at(0,0)];for(let k=1;k<=nSide;k++){const s=k/(nSide+1);loc.push(at(s,widAt(s)));}
   loc.push(at(0.99,w0*0.26));loc.push(at(1,0));loc.push(at(0.99,-w0*0.26));
   for(let k=nSide;k>=1;k--){const s=k/(nSide+1);loc.push(at(s,-widAt(s)));}return elevScallop(loc,[(bx+tx)/2,(byy+ty)/2],0.5,r,true);}
-function elevSpikesStr(cx,by,bodyRx,bodyTopH,col){const w0=bodyRx*0.11;
+function elevSpikesStr(cx,by,bodyRx,bodyTopH,col){const w0=bodyTopH*0.141;   // width tied to spike length → keeps the picker's fat, non-pointy aspect at any height
   const items=ELEV_SPIKE_PAT.map(p=>({bx:cx+p.x*bodyRx,baseY:by-p.base*bodyTopH,tx:cx+(p.x+p.lean)*bodyRx,ty:by-p.tip*bodyTopH}));
   let s='';items.sort((a,b)=>a.baseY-b.baseY).forEach((it,i)=>{s+=`<path d="${elevConePath(it.bx,it.baseY,it.tx,it.ty,w0,elevSeed(500+i*29))}" fill="${col}" fill-opacity=".95" stroke="rgba(0,0,0,.18)" stroke-width=".6" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;});return s;}
 // hand-placed flower layouts (x = frac from center, y = center height as frac of body height)
@@ -792,7 +792,7 @@ function elevShrubMarkup(it,cx,gy,rx,ch,rnd){
   let s='';
   if(cfg.body==='box') s+=elevShFol(elevBox(cx,gy,ch,rnd),fc);
   else if(cfg.body==='columnar') s+=elevShFol(elevTallblob(cx,gy,rx,ch,rnd,0.3),fc);
-  else if(cfg.body==='spike'){const tb=rx*0.78;s+=elevShFol(elevBush(cx,gy,rx,tb,rnd,0.5),fc);s+=elevSpikesStr(cx,gy,rx,tb,cfg.col);}  // picker's low-mound proportion (scale from width, not full height) → fat short cones, not pointy
+  else if(cfg.body==='spike'){const tb=ch/1.61;s+=elevShFol(elevBush(cx,gy,rx,tb,rnd,0.5),fc);s+=elevSpikesStr(cx,gy,rx,tb,cfg.col);}  // full-height mound; cones stay fat (non-pointy) via width-from-length in elevSpikesStr
   else s+=elevShFol(elevBush(cx,gy,rx,bh,rnd,cfg.body==='tight'?0.3:0.5),fc);
   if(cfg.pos) s+=elevFlowersAtStr(ELEV_POS[cfg.pos],cx,gy,rx,bh,ar,cfg.ac,cfg.col,cfg.sz);
   else if(cfg.ac==='berry') s+=elevBerriesStr(cx,gy,rx,bh,ar,cfg.col,cfg.bsz,cfg.gap);
