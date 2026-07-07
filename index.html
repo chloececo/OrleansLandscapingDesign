@@ -912,6 +912,16 @@ function elevOregano(cx,baseY,rx,ch,rnd,fill,stk){
     s+=elevHerbLeaf(lx,ly,ang,len,len*0.34,'almond',fill,stk);});
   return s;
 }
+// rosemary: feathery plumes — upright stems lined with fine needle pairs
+function elevRosemary(cx,baseY,rx,topH,rnd,stk){
+  let s='';const stems=5,q=n=>n.toFixed(2);
+  const ndl=(x,y,ex,ey)=>`<line x1="${q(x)}" y1="${q(y)}" x2="${q(ex)}" y2="${q(ey)}" stroke="${stk}" stroke-width="1.1" stroke-linecap="round" stroke-opacity="0.85" vector-effect="non-scaling-stroke"/>`;
+  for(let i=0;i<stems;i++){const t=(i/(stems-1))*2-1,bx=cx+t*rx*0.62,tipY=baseY-topH*(0.8+rnd()*0.18);
+    s+=`<path d="M ${q(bx)} ${q(baseY)} Q ${q(bx+t*rx*0.1)} ${q(baseY-topH*0.5)} ${q(bx+t*rx*0.15)} ${q(tipY)}" fill="none" stroke="${stk}" stroke-width="1.4" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`;
+    const m=18;for(let k=1;k<=m;k++){const f=k/(m+1),x=bx+t*rx*0.15*f,y=baseY+(tipY-baseY)*f,nl=rx*0.28*(1-f*0.35);
+      s+=ndl(x,y,x-nl,y-nl)+ndl(x,y,x+nl,y-nl);}}
+  return s;
+}
 // pid → config; only these herbs override the generic bush (ll/lw are fractions of height/half-width)
 const ELEV_HERB={
   basil:{style:'almond',ll:0.24,lw:0.32},
@@ -920,7 +930,8 @@ const ELEV_HERB={
   dill:{dill:true,flw:'#e6d15a'},
   thyme:{mat:true,flw:'#b79fd0'},
   chives:{chive:true},
-  oregano:{oregano:true}
+  oregano:{oregano:true},
+  rosemary:{plume:true}
 };
 function elevHerbMarkup(it,cx,gy,rx,ch,rnd){
   const cfg=ELEV_HERB[it.pid]; if(!cfg) return '';
@@ -929,6 +940,7 @@ function elevHerbMarkup(it,cx,gy,rx,ch,rnd){
   if(cfg.mat) return elevHerbMat(cx,gy,rx,ch,rnd,fill,stk,cfg.flw);
   if(cfg.chive) return elevHerbChive(cx,gy,rx,ch,rnd,'#6f9457',pl.color,elevDarken(pl.color,0.3));  // green blades, data-color flower heads
   if(cfg.oregano) return elevOregano(cx,gy,rx,ch,rnd,fill,stk);
+  if(cfg.plume) return elevRosemary(cx,gy,rx,ch,rnd,elevDarken(pl.color,0.5));  // stroke-only icon; 0.5 matches the picker's ink
   return elevHerbStem(cx,gy,rx,ch,rnd,cfg.style,ch*cfg.ll,rx*cfg.lw,fill,stk);
 }
 function drawElevation(svg,bed,lay,view,topH){
