@@ -870,6 +870,26 @@ function elevHerbChive(cx,baseY,rx,topH,rnd,bladeStk,headCol,headStk){
     if(i%2===0)s+=`<circle cx="${f(tipX)}" cy="${f(tipY)}" r="${f(rx*0.16)}" fill="${headCol}" stroke="${headStk}" stroke-width="0.6" vector-effect="non-scaling-stroke"/>`;}
   return s;
 }
+// oregano: a low leafy mound with hand-placed leaves (layout tuned in the customizer).
+// x = fraction of half-width from center, y = fraction of the layout's height reference,
+// a = angle in degrees (0 = up), s = leaf length as a fraction of that height reference.
+const ELEV_OREGANO_LEAVES=[
+ {x:0.251,y:0.12,a:23,s:0.144},{x:0.46,y:0.199,a:1,s:0.122},{x:-0.729,y:0.1,a:-12,s:0.157},
+ {x:0.234,y:0.357,a:-8,s:0.126},{x:-0.436,y:0.1,a:20,s:0.15},{x:0.072,y:0.206,a:19,s:0.118},
+ {x:-0.287,y:0.311,a:17,s:0.121},{x:-0.091,y:0.193,a:-25,s:0.127},{x:0.049,y:0.392,a:-13,s:0.137},
+ {x:-0.537,y:0.287,a:3,s:0.143},{x:0.67,y:0.233,a:18,s:0.125},{x:0.806,y:0.1,a:23,s:0.122}
+];
+function elevOregano(cx,baseY,rx,ch,rnd,fill,stk){
+  // preview→tool scale: mound half-width MHW(px) maps to rx(ft); aspect preserved.
+  const MRX=132,MH=176,MHW=129.36,MMH=91.52,sc=rx/MHW,mhw=rx,mh=MMH*sc,f=v=>v.toFixed(2);
+  const n=Math.max(9,Math.round(mhw*3)),pts=[];
+  for(let i=0;i<=n;i++){const a=Math.PI*(1-i/n),w=1+(rnd()*2-1)*0.05;pts.push([cx+Math.cos(a)*mhw*w,baseY-Math.sin(a)*mh*w]);}
+  pts[0]=[cx-mhw,baseY];pts[n]=[cx+mhw,baseY];
+  let s=`<path d="${elevScallop(pts,[cx,baseY-mh*0.12],0.5,rnd,false)} L ${f(cx-mhw)} ${f(baseY)} Z" fill="${fill}" fill-opacity="0.92" stroke="${stk}" stroke-width="1.1" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
+  ELEV_OREGANO_LEAVES.forEach(l=>{const lx=cx+l.x*MRX*sc,ly=baseY-l.y*MH*sc,ang=(-90+l.a)*Math.PI/180,len=l.s*MH*sc;
+    s+=elevHerbLeaf(lx,ly,ang,len,len*0.34,'almond',fill,stk);});
+  return s;
+}
 // pid → config; only these herbs override the generic bush (ll/lw are fractions of height/half-width)
 const ELEV_HERB={
   basil:{style:'almond',ll:0.24,lw:0.32},
@@ -877,7 +897,8 @@ const ELEV_HERB={
   mint:{style:'scallop',ll:0.24,lw:0.32},
   dill:{dill:true,flw:'#e6d15a'},
   thyme:{mat:true,flw:'#b79fd0'},
-  chives:{chive:true}
+  chives:{chive:true},
+  oregano:{oregano:true}
 };
 function elevHerbMarkup(it,cx,gy,rx,ch,rnd){
   const cfg=ELEV_HERB[it.pid]; if(!cfg) return '';
@@ -885,6 +906,7 @@ function elevHerbMarkup(it,cx,gy,rx,ch,rnd){
   if(cfg.dill) return elevDill(cx,gy,rx,ch,rnd,fill,stk,cfg.flw);
   if(cfg.mat) return elevHerbMat(cx,gy,rx,ch,rnd,fill,stk,cfg.flw);
   if(cfg.chive) return elevHerbChive(cx,gy,rx,ch,rnd,'#6f9457',pl.color,elevDarken(pl.color,0.3));  // green blades, data-color flower heads
+  if(cfg.oregano) return elevOregano(cx,gy,rx,ch,rnd,fill,stk);
   return elevHerbStem(cx,gy,rx,ch,rnd,cfg.style,ch*cfg.ll,rx*cfg.lw,fill,stk);
 }
 function drawElevation(svg,bed,lay,view,topH){
