@@ -617,11 +617,12 @@ function viewOrient(bed){
 // ---- Natural foliage outlines (organic, slightly irregular — not bare ellipses) ----
 // Each plant gets a stable pseudo-random wobble seeded from its id + position, so the
 // silhouette looks hand-drawn yet doesn't jitter between re-renders.
-function elevRng(it){
-  let h=2166136261>>>0; const s=it.pid;                 // seed per species → one shape per species
+function elevRngStr(s){
+  let h=2166136261>>>0;
   for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}
   return function(){h=h+0x6D2B79F5|0;let t=Math.imul(h^h>>>15,1|h);t=t+Math.imul(t^t>>>7,61|t)^t;return ((t^t>>>14)>>>0)/4294967296;};
 }
+function elevRng(it){return elevRngStr(it.pid);}        // seed per species → one shape per species
 // Catmull-Rom through the points → cubic bezier, for soft organic edges
 function elevSmooth(pts,closed){
   const n=pts.length; if(n<3) return 'M '+pts.map(p=>p[0].toFixed(2)+' '+p[1].toFixed(2)).join(' L ')+(closed?' Z':'');
@@ -706,6 +707,103 @@ function elevGrassBlades(cx,by,rx,topH,rnd){
     d+=`M ${bx.toFixed(2)} ${baseY.toFixed(2)} Q ${cpX.toFixed(2)} ${cpY.toFixed(2)} ${tipX.toFixed(2)} ${(baseY-h).toFixed(2)} `;
   }
   return d;
+}
+// ---- Per-species grass icons (settings picked in the Grass Icon Studio artifact). ----
+// Species not listed here keep the shared tuft-and-blades icon above. Geometry is in
+// feet; blade strokes stay screen-px (vector-effect) like the shared icon, while plume
+// and bead widths are real feet so they scale with the plant.
+const ELEV_GRASS={
+ liriope:{fc:'#5e7a4e',hm:1.05,spread:0.6,dip:0.2,dens:9.5,sw:2.3,arch:0.95,droop:0.1,dk:0.35,tuft:0.6,rs:2,seed:{style:'spike',col:'#8d7fc4',sz:1.15,n:4}},
+ littlebluestem:{fc:'#9a7b5f',hm:1.05,spread:0.2,dip:0.25,dens:9.5,sw:1.6,arch:1.05,droop:0.05,dk:0.4,tuft:0.7,rs:2,seed:{style:'tufts',col:'#efe9dc',sz:1.35,n:12}},
+ pennsylvaniasedge:{fc:'#7fa05a',hm:0.85,spread:0.6,dip:0.25,dens:14,sw:1.4,arch:1.25,droop:0.55,dk:0.3,tuft:0.65},
+ prairiedropseed:{fc:'#a8b06a',hm:0.9,spread:0.4,dip:0.2,dens:13,sw:1.4,arch:1.2,droop:0.5,dk:0.3,tuft:0.5,seed:{style:'panicle',col:'#bcb27a',sz:0.7,n:11}},
+ purplelovegrass:{fc:'#8f9a5f',hm:0.75,spread:0.35,dip:0.2,dens:5,sw:1.3,arch:1,droop:0,dk:0.3,tuft:0.65,seed:{style:'panicle',col:'#a9628a',sz:1.8,n:12}}
+};
+function elevQuadAt(B,C,T,u){const v=1-u;return [v*v*B[0]+2*v*u*C[0]+u*u*T[0], v*v*B[1]+2*v*u*C[1]+u*u*T[1]];}
+function elevGrassMarkup(it,cx,by,rx,ch){
+  const cfg=ELEV_GRASS[it.pid]; if(!cfg) return '';
+  const q=n=>n.toFixed(2);
+  const topH=ch*cfg.hm, s=rx*cfg.spread, dip=rx*cfg.dip, top=rx*0.32;
+  const rnd=elevRngStr(it.pid+(cfg.rs?('#'+cfg.rs):''));
+  let out=`<path d="M ${q(cx-s)} ${q(by)} Q ${q(cx)} ${q(by+dip*2)} ${q(cx+s)} ${q(by)} Q ${q(cx)} ${q(by-top)} ${q(cx-s)} ${q(by)} Z" fill="${cfg.fc}" fill-opacity="${cfg.tuft}"/>`;
+  const n=Math.max(8,Math.round(rx*2*cfg.dens));        // dens = blades per ft of clump width
+  const blades=[]; let d='';
+  for(let i=0;i<n;i++){
+    const t=n>1?(i/(n-1))*2-1:0;
+    const bx=cx+t*s, baseY=by+dip*(1-t*t);
+    const tipX=cx+t*rx*(cfg.arch+cfg.droop*0.5+rnd()*0.14);
+    const h=topH*(0.55+0.45*(1-Math.abs(t)))*(0.82+rnd()*0.24);
+    const cpX=cx+t*rx*cfg.arch*0.51, cpY=baseY-h*(0.92+cfg.droop*0.16), tipY=baseY-h*(1-cfg.droop);
+    d+=`M ${q(bx)} ${q(baseY)} Q ${q(cpX)} ${q(cpY)} ${q(tipX)} ${q(tipY)} `;
+    blades.push({B:[bx,baseY],C:[cpX,cpY],T:[tipX,tipY],h});
+  }
+  out+=`<path d="${d}" fill="none" stroke="${elevDarken(cfg.fc,cfg.dk)}" stroke-width="${cfg.sw}" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`;
+  if(cfg.seed) out+=elevGrassSeedsStr(cfg,cx,by,rx,topH,s,dip,blades,elevRngStr(it.pid+'/seed'+(cfg.rs?('#'+cfg.rs):'')));
+  return out;
+}
+function elevGrassSeedsStr(cfg,cx,by,rx,topH,s,dip,blades,r){
+  const q=n=>n.toFixed(2), q3=n=>n.toFixed(3);
+  const sd=cfg.seed, col=sd.col, sz=sd.sz, ink='rgba(0,0,0,.18)';
+  const stemInk=elevDarken(cfg.fc,cfg.dk+0.1);
+  let out='';
+  const stems=(count,reach)=>{                          // shared upright flowering stems
+    const a=[];
+    for(let i=0;i<count;i++){
+      const t=count>1?(i/(count-1))*2-1:0;
+      const x=cx+t*s*0.8+(r()*2-1)*s*0.12, baseY=by+dip*(1-t*t);
+      const h=topH*reach*(0.9+r()*0.2)*(0.75+0.25*(1-Math.abs(t)));
+      a.push({x,baseY,topY:baseY-h,lean:t*rx*0.12+(r()*2-1)*rx*0.05});
+    }
+    return a;
+  };
+  if(sd.style==='foxtail'){                             // fuzzy plume continuing off the tallest blade tips
+    [...blades].sort((a,b)=>b.h-a.h).slice(0,Math.min(sd.n,blades.length)).forEach(b=>{
+      let dx=b.T[0]-b.C[0], dy=b.T[1]-b.C[1]; const L=Math.hypot(dx,dy)||1; dx/=L; dy/=L;
+      const len=0.45*sz, w=0.13*sz, x2=b.T[0]+dx*len, y2=b.T[1]+dy*len;
+      out+=`<line x1="${q(b.T[0])}" y1="${q(b.T[1])}" x2="${q(x2)}" y2="${q(y2)}" stroke="${col}" stroke-width="${q3(w)}" stroke-linecap="round"/>`;
+      for(let k=0;k<7;k++){const u=k/6, px=b.T[0]+dx*len*u+(r()*2-1)*w*0.5, py=b.T[1]+dy*len*u+(r()*2-1)*w*0.5;
+        out+=`<circle cx="${q(px)}" cy="${q(py)}" r="${q3(w*0.34*(1.1-u*0.5))}" fill="${col}"/>`;}
+      out+=`<line x1="${q(b.T[0])}" y1="${q(b.T[1])}" x2="${q(x2)}" y2="${q(y2)}" stroke="${ink}" stroke-width="0.6" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`;
+    });
+  }else if(sd.style==='feather'){                       // upright narrow plumes above the clump
+    stems(sd.n,1.18).forEach(t2=>{
+      out+=`<line x1="${q(t2.x)}" y1="${q(t2.baseY)}" x2="${q(t2.x+t2.lean)}" y2="${q(t2.topY)}" stroke="${stemInk}" stroke-width="0.9" vector-effect="non-scaling-stroke"/>`;
+      const pw=0.055*sz, ph=0.26*sz;
+      out+=`<ellipse cx="${q(t2.x+t2.lean)}" cy="${q(t2.topY-ph*0.4)}" rx="${q3(pw)}" ry="${q3(ph)}" transform="rotate(${q(t2.lean/rx*22)} ${q(t2.x+t2.lean)} ${q(t2.topY-ph*0.4)})" fill="${col}" stroke="${ink}" stroke-width="0.6" vector-effect="non-scaling-stroke"/>`;
+    });
+  }else if(sd.style==='panicle'){                       // airy dot sprays on fine stems
+    stems(sd.n,1.12).forEach(t2=>{
+      out+=`<line x1="${q(t2.x)}" y1="${q(t2.baseY)}" x2="${q(t2.x+t2.lean)}" y2="${q(t2.topY)}" stroke="${stemInk}" stroke-width="0.8" vector-effect="non-scaling-stroke"/>`;
+      const nd=8+Math.round(r()*5);
+      for(let k=0;k<nd;k++){
+        const px=t2.x+t2.lean+(r()*2-1)*0.30*sz, py=t2.topY-r()*0.26*sz+0.05;
+        out+=`<circle cx="${q(px)}" cy="${q(py)}" r="${q3(0.026*sz)}" fill="${col}" fill-opacity="0.9"/>`;
+      }
+    });
+  }else if(sd.style==='haze'){                          // a soft cloud of seed dots over the clump
+    const nd=sd.n*10, cyh=by-dip-topH*0.72;
+    for(let k=0;k<nd;k++){
+      const a=r()*Math.PI*2, rr=Math.sqrt(r());
+      out+=`<circle cx="${q(cx+Math.cos(a)*rr*rx*1.05)}" cy="${q(cyh+Math.sin(a)*rr*topH*0.38)}" r="${q3(0.022*sz)}" fill="${col}" fill-opacity="0.75"/>`;
+    }
+  }else if(sd.style==='spike'){                         // upright stems with stacked beads (liriope)
+    stems(sd.n,1.2).forEach(t2=>{
+      out+=`<line x1="${q(t2.x)}" y1="${q(t2.baseY)}" x2="${q(t2.x+t2.lean)}" y2="${q(t2.topY)}" stroke="${stemInk}" stroke-width="0.9" vector-effect="non-scaling-stroke"/>`;
+      const rr=0.042*sz;
+      for(let k=0;k<5;k++)
+        out+=`<circle cx="${q(t2.x+t2.lean*(1-k*0.06))}" cy="${q(t2.topY+k*rr*2.1)}" r="${q3(rr)}" fill="${col}" stroke="${ink}" stroke-width="0.5" vector-effect="non-scaling-stroke"/>`;
+    });
+  }else if(sd.style==='tufts'){                         // fluffy seeds dotted along upper blades (bluestem)
+    const step=Math.max(1,Math.round(blades.length/sd.n));
+    for(let i=0;i<blades.length;i+=step){
+      const b=blades[i];
+      for(let k=0;k<3;k++){
+        const p=elevQuadAt(b.B,b.C,b.T,0.62+k*0.16);
+        out+=`<circle cx="${q(p[0]+(r()*2-1)*0.02)}" cy="${q(p[1]+(r()*2-1)*0.02)}" r="${q3(0.035*sz*(0.8+r()*0.4))}" fill="${col}" fill-opacity="0.92"/>`;
+      }
+    }
+  }
+  return out;
 }
 // darken a #rrggbb fill so a grass's blade strokes read against the soil
 function elevDarken(hex,amt){
@@ -1024,6 +1122,9 @@ function drawElevation(svg,bed,lay,view,topH){
         can.setAttribute('d',elevBlob(baseX,baseY-trunkH-(ch-trunkH)/2,cr,(ch-trunkH)/2,rnd));
         can.setAttribute('fill',pl.color);can.setAttribute('fill-opacity',0.9);
         can.setAttribute('stroke','rgba(0,0,0,.26)');can.setAttribute('vector-effect','non-scaling-stroke');can.setAttribute('stroke-linejoin','round');g.appendChild(can);
+      }else if(pl.cat==='Grass' && ELEV_GRASS[it.pid]){
+        const frag=document.createElementNS(SVGNS,'g'); frag.innerHTML=elevGrassMarkup(it,baseX,baseY,rx,ch);
+        while(frag.firstChild) g.appendChild(frag.firstChild);
       }else if(pl.cat==='Grass'){
         const topH=ch*1.05;
         const tuft=document.createElementNS(SVGNS,'path');                  // faint base mound
