@@ -912,6 +912,24 @@ function elevOregano(cx,baseY,rx,ch,rnd,fill,stk){
     s+=elevHerbLeaf(lx,ly,ang,len,len*0.34,'almond',fill,stk);});
   return s;
 }
+// parsley: celery-like stalks, each carrying a head orb plus three leaf-orbs
+// spaced down the stalk that shrink toward the base (orb = lobed scallop disc)
+function elevParsleyDisc(cx,cy,r,rnd,fill,stk){
+  const n=10,pts=[];
+  for(let i=0;i<n;i++){const a=(i/n)*Math.PI*2,w=1+(rnd()*2-1)*0.06;pts.push([cx+Math.cos(a)*r*w,cy+Math.sin(a)*r*w]);}
+  return `<path d="${elevScallop(pts,[cx,cy],0.8,rnd,true)}" fill="${fill}" fill-opacity="0.92" stroke="${stk}" stroke-width="0.8" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
+}
+function elevParsley(cx,baseY,rx,topH,rnd,fill,stk){
+  let s='';const stems=4,extra=3,q=n=>n.toFixed(2);
+  for(let i=0;i<stems;i++){const t=(i/(stems-1))*2-1,ang=-Math.PI/2+t*0.35,len=topH*(0.85+rnd()*0.12),
+    hx=cx+Math.cos(ang)*len,hy=baseY+Math.sin(ang)*len,bx=cx+t*rx*0.25,cpx=cx+t*rx*0.3,cpy=baseY-len*0.5;
+    s+=`<path d="M ${q(bx)} ${q(baseY)} Q ${q(cpx)} ${q(cpy)} ${q(hx)} ${q(hy)}" fill="none" stroke="${stk}" stroke-width="1.3" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`;
+    const P=g=>{const u=1-g;return [u*u*bx+2*u*g*cpx+g*g*hx, u*u*baseY+2*u*g*cpy+g*g*hy];};
+    for(let k=extra;k>=1;k--){const p=P(0.78-(k-1)*0.2);
+      s+=elevParsleyDisc(p[0],p[1],topH*0.17*Math.pow(0.78,k),rnd,fill,stk);}
+    s+=elevParsleyDisc(hx,hy-topH*0.06,topH*0.17,rnd,fill,stk);}
+  return s;
+}
 // rosemary: feathery plumes — upright stems lined with fine needle pairs
 function elevRosemary(cx,baseY,rx,topH,rnd,stk){
   let s='';const stems=5,q=n=>n.toFixed(2);
@@ -931,7 +949,8 @@ const ELEV_HERB={
   thyme:{mat:true,flw:'#b79fd0'},
   chives:{chive:true},
   oregano:{oregano:true},
-  rosemary:{plume:true}
+  rosemary:{plume:true},
+  parsley:{celery:true}
 };
 function elevHerbMarkup(it,cx,gy,rx,ch,rnd){
   const cfg=ELEV_HERB[it.pid]; if(!cfg) return '';
@@ -941,6 +960,7 @@ function elevHerbMarkup(it,cx,gy,rx,ch,rnd){
   if(cfg.chive) return elevHerbChive(cx,gy,rx,ch,rnd,'#6f9457',pl.color,elevDarken(pl.color,0.3));  // green blades, data-color flower heads
   if(cfg.oregano) return elevOregano(cx,gy,rx,ch,rnd,fill,stk);
   if(cfg.plume) return elevRosemary(cx,gy,rx,ch,rnd,elevDarken(pl.color,0.5));  // stroke-only icon; 0.5 matches the picker's ink
+  if(cfg.celery) return elevParsley(cx,gy,rx,ch,rnd,fill,elevDarken(pl.color,0.5));  // picker ink, as with rosemary
   return elevHerbStem(cx,gy,rx,ch,rnd,cfg.style,ch*cfg.ll,rx*cfg.lw,fill,stk);
 }
 function drawElevation(svg,bed,lay,view,topH){
