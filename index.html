@@ -715,7 +715,7 @@ function elevGrassBlades(cx,by,rx,topH,rnd){
 const ELEV_GRASS={
  liriope:{fc:'#5e7a4e',hm:1.05,spread:0.6,dip:0.2,dens:9.5,sw:2.3,arch:0.95,droop:0.1,dk:0.35,tuft:0.6,rs:2,seed:{style:'spike',col:'#8d7fc4',sz:1.15,n:4}},
  littlebluestem:{fc:'#9a7b5f',hm:1.05,spread:0.2,dip:0.25,dens:9.5,sw:1.6,arch:1.05,droop:0.05,dk:0.4,tuft:0.7,rs:2,seed:{style:'tufts',col:'#efe9dc',sz:1.35,n:12}},
- pennsylvaniasedge:{fc:'#7fa05a',hm:0.85,spread:0.6,dip:0.25,dens:14,sw:1.4,arch:1.25,droop:0.55,dk:0.3,tuft:0.65},
+ pennsylvaniasedge:{fc:'#7fa05a',hm:0.85,spread:0.6,dip:0.25,dens:14,sw:1.4,arch:1.25,droop:0.55,dk:0.3,tuft:0.65,rs:2},
  reedgrass:{fc:'#c8b277',hm:0.95,spread:0.6,dip:0.15,dens:6,sw:1.6,arch:0.55,droop:0,dk:0.3,tuft:0.45,rs:1,seed:{style:'feather',col:'#ddca8e',sz:1.6,n:6}},
  prairiedropseed:{fc:'#a8b06a',hm:0.9,spread:0.4,dip:0.2,dens:13,sw:1.4,arch:1.2,droop:0.5,dk:0.3,tuft:0.5,seed:{style:'panicle',col:'#bcb27a',sz:0.7,n:11}},
  purplelovegrass:{fc:'#8f9a5f',hm:0.75,spread:0.35,dip:0.2,dens:5,sw:1.3,arch:1,droop:0,dk:0.3,tuft:0.65,seed:{style:'panicle',col:'#a9628a',sz:1.8,n:12}}
@@ -757,14 +757,17 @@ function elevGrassSeedsStr(cfg,cx,by,rx,topH,s,dip,blades,r){
     }
     return a;
   };
-  if(sd.style==='foxtail'){                             // fuzzy plume continuing off the tallest blade tips
+  if(sd.style==='foxtail'){                             // fuzzy plume continuing the blade's own arc past its tip
     [...blades].sort((a,b)=>b.h-a.h).slice(0,Math.min(sd.n,blades.length)).forEach(b=>{
-      let dx=b.T[0]-b.C[0], dy=b.T[1]-b.C[1]; const L=Math.hypot(dx,dy)||1; dx/=L; dy/=L;
-      const len=0.45*sz, w=0.13*sz, x2=b.T[0]+dx*len, y2=b.T[1]+dy*len;
-      out+=`<line x1="${q(b.T[0])}" y1="${q(b.T[1])}" x2="${q(x2)}" y2="${q(y2)}" stroke="${col}" stroke-width="${q3(w)}" stroke-linecap="round"/>`;
-      for(let k=0;k<7;k++){const u=k/6, px=b.T[0]+dx*len*u+(r()*2-1)*w*0.5, py=b.T[1]+dy*len*u+(r()*2-1)*w*0.5;
-        out+=`<circle cx="${q(px)}" cy="${q(py)}" r="${q3(w*0.34*(1.1-u*0.5))}" fill="${col}"/>`;}
-      out+=`<line x1="${q(b.T[0])}" y1="${q(b.T[1])}" x2="${q(x2)}" y2="${q(y2)}" stroke="${ink}" stroke-width="0.6" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`;
+      const len=0.45*sz, w=0.13*sz;
+      const ext=len/((2*Math.hypot(b.T[0]-b.C[0],b.T[1]-b.C[1]))||1);  // param step ≈ len along the curve
+      const N=6, pts=[];
+      for(let k=0;k<=N;k++) pts.push(elevQuadAt(b.B,b.C,b.T,1+ext*k/N)); // same parabola, u>1 → keeps bending
+      const pd='M '+pts.map(p=>q(p[0])+' '+q(p[1])).join(' L ');
+      out+=`<path d="${pd}" fill="none" stroke="${col}" stroke-width="${q3(w)}" stroke-linecap="round" stroke-linejoin="round"/>`;
+      for(let k=0;k<7;k++){const p=elevQuadAt(b.B,b.C,b.T,1+ext*k/6);
+        out+=`<circle cx="${q(p[0]+(r()*2-1)*w*0.5)}" cy="${q(p[1]+(r()*2-1)*w*0.5)}" r="${q3(w*0.34*(1.1-(k/6)*0.5))}" fill="${col}"/>`;}
+      out+=`<path d="${pd}" fill="none" stroke="${ink}" stroke-width="0.6" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
     });
   }else if(sd.style==='feather'){                       // upright narrow plumes above the clump
     stems(sd.n,1.18).forEach(t2=>{
@@ -775,14 +778,14 @@ function elevGrassSeedsStr(cfg,cx,by,rx,topH,s,dip,blades,r){
   }else if(sd.style==='panicle'){                       // airy dot sprays on fine stems
     stems(sd.n,1.12).forEach(t2=>{
       out+=`<line x1="${q(t2.x)}" y1="${q(t2.baseY)}" x2="${q(t2.x+t2.lean)}" y2="${q(t2.topY)}" stroke="${stemInk}" stroke-width="0.8" vector-effect="non-scaling-stroke"/>`;
-      const nd=8+Math.round(r()*5);
+      const nd=Math.round((8+r()*5)*(sd.dd||1));       // dd = optional seed-density multiplier
       for(let k=0;k<nd;k++){
         const px=t2.x+t2.lean+(r()*2-1)*0.30*sz, py=t2.topY-r()*0.26*sz+0.05;
         out+=`<circle cx="${q(px)}" cy="${q(py)}" r="${q3(0.026*sz)}" fill="${col}" fill-opacity="0.9"/>`;
       }
     });
   }else if(sd.style==='haze'){                          // a soft cloud of seed dots over the clump
-    const nd=sd.n*10, cyh=by-dip-topH*0.72;
+    const nd=Math.round(sd.n*10*(sd.dd||1)), cyh=by-dip-topH*0.72;
     for(let k=0;k<nd;k++){
       const a=r()*Math.PI*2, rr=Math.sqrt(r());
       out+=`<circle cx="${q(cx+Math.cos(a)*rr*rx*1.05)}" cy="${q(cyh+Math.sin(a)*rr*topH*0.38)}" r="${q3(0.022*sz)}" fill="${col}" fill-opacity="0.75"/>`;
