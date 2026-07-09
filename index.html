@@ -811,6 +811,66 @@ function elevGrassSeedsStr(cfg,cx,by,rx,topH,s,dip,blades,r){
   }
   return out;
 }
+// ---- Per-species fern icons (settings picked in the Fern Icon Studio artifact). ----
+// Geometry in feet; rachis strokes screen-px (vector-effect) like grass blades.
+// Pinnae are filled tapered leaflets: width/curl are fractions of leaflet length.
+const ELEV_FERN={
+ fern:{fc:'#4f8a5b',hm:1,n:8,spread:0.42,arch:1.55,droop:0,lw:0.44,pn:8,taper:0.25,pa:0.35,pw:0.24,pc:0.04,sw:1.5,dk:0.2,tuft:0.45,rs:13},
+ cinnamonfern:{fc:'#3f7a4a',hm:0.95,n:7,spread:0.18,arch:1.05,droop:0.6,lw:0.42,pn:11,taper:0.2,pa:0.3,pw:0.14,pc:0.15,sw:1.2,dk:0.42,tuft:0.4,rs:1,fert:{col:'#b06a2e',n:3,hm:0.9,sz:1.6}},
+ christmasfern:{fc:'#50b462',hm:1,n:4,spread:0.42,arch:1.25,droop:0,lw:0.4,pn:6,taper:0,pa:0.2,pw:0.28,pc:0.1,sw:1.2,dk:0.42,tuft:0.5,rs:1},
+ ostrichfern:{fc:'#4a8a55',hm:1.15,n:10,spread:0.28,arch:1.15,droop:0.1,lw:0.46,pn:12,taper:0.45,pa:0.35,pw:0.12,pc:0.3,sw:1.7,dk:0.48,tuft:0.35,rs:1,fert:{col:'#7a5230',n:3,hm:0.45,sz:0.9}}
+};
+function elevFernMarkup(it,cx,by,rx,ch){
+  const cfg=ELEV_FERN[it.pid]; if(!cfg) return '';
+  const q=n=>n.toFixed(2), q3=n=>n.toFixed(3);
+  const topH=ch*cfg.hm, s=rx*cfg.spread, dip=rx*0.12;
+  const rnd=elevRngStr(it.pid+(cfg.rs?('#'+cfg.rs):''));
+  const ink=elevDarken(cfg.fc,cfg.dk);
+  // faint basal crown so the clump sits in the soil (same idea as the grass tuft)
+  let out=`<path d="M ${q(cx-s*1.4)} ${q(by)} Q ${q(cx)} ${q(by+dip*2)} ${q(cx+s*1.4)} ${q(by)} Q ${q(cx)} ${q(by-rx*0.18)} ${q(cx-s*1.4)} ${q(by)} Z" fill="${cfg.fc}" fill-opacity="${cfg.tuft}"/>`;
+  const pa=0.25+cfg.taper*1.75, pb=0.6;               // pinna-length profile u^pa·(1-u)^pb
+  const um=pa/(pa+pb), norm=Math.pow(um,pa)*Math.pow(1-um,pb);
+  for(let i=0;i<cfg.n;i++){
+    const t=cfg.n>1?(i/(cfg.n-1))*2-1:0;              // -1 … +1 across the vase
+    const bx=cx+t*s, baseY=by+dip*(1-t*t);
+    const h=topH*(0.6+0.4*(1-Math.abs(t)))*(0.85+rnd()*0.3);
+    const tipX=cx+t*rx*cfg.arch+(rnd()*2-1)*rx*0.06;
+    const cpX=cx+t*rx*cfg.arch*0.45+(rnd()*2-1)*rx*0.04, cpY=baseY-h*(0.95+cfg.droop*0.2);
+    const tipY=baseY-h*(1-cfg.droop);
+    const B=[bx,baseY],C=[cpX,cpY],T=[tipX,tipY];
+    let pin='';
+    for(let k=0;k<cfg.pn;k++){
+      const u=0.10+0.86*(cfg.pn>1?k/(cfg.pn-1):0);
+      const p=elevQuadAt(B,C,T,u);
+      const dx=2*(1-u)*(C[0]-B[0])+2*u*(T[0]-C[0]), dy=2*(1-u)*(C[1]-B[1])+2*u*(T[1]-C[1]);
+      const dl=Math.hypot(dx,dy)||1, tx=dx/dl, ty=dy/dl, nx=-ty, ny=tx;
+      const len=rx*cfg.lw*(Math.pow(u,pa)*Math.pow(1-u,pb)/norm)*(0.85+rnd()*0.3);
+      for(const sg of [1,-1]){                        // paired pinnae, swept toward the tip
+        const vx0=sg*nx*(1-cfg.pa)+tx*cfg.pa, vy0=sg*ny*(1-cfg.pa)+ty*cfg.pa;
+        const vl=Math.hypot(vx0,vy0)||1, vx=vx0/vl, vy=vy0/vl;
+        const ex=p[0]+vx*len, ey=p[1]+vy*len;         // leaflet tip
+        let wx=-vy, wy=vx; if(wy<0){wx=-wx;wy=-wy;}   // belly side = downward, so leaflets droop
+        const mx=(p[0]+ex)/2, my=(p[1]+ey)/2, bd=len*cfg.pc, w=len*cfg.pw;
+        pin+=`M ${q(p[0])} ${q(p[1])} Q ${q(mx+wx*(2*bd+2*w))} ${q(my+wy*(2*bd+2*w))} ${q(ex)} ${q(ey)} Q ${q(mx+wx*(2*bd-2*w))} ${q(my+wy*(2*bd-2*w))} ${q(p[0])} ${q(p[1])} Z `;
+      }
+    }
+    out+=`<path d="${pin}" fill="${cfg.fc}" stroke="rgba(0,0,0,.12)" stroke-width="0.35" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
+    out+=`<path d="M ${q(B[0])} ${q(B[1])} Q ${q(C[0])} ${q(C[1])} ${q(T[0])} ${q(T[1])}" fill="none" stroke="${ink}" stroke-width="${cfg.sw}" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`;
+  }
+  if(cfg.fert&&cfg.fert.n){                           // upright fertile fronds (cinnamon / ostrich)
+    const fr=elevRngStr(it.pid+'/fert'+(cfg.rs?('#'+cfg.rs):''));
+    const fink=elevDarken(cfg.fert.col,0.25);
+    for(let i=0;i<cfg.fert.n;i++){
+      const t=cfg.fert.n>1?(i/(cfg.fert.n-1))*2-1:0;
+      const x=cx+t*s*0.55+(fr()*2-1)*s*0.15, fh=topH*cfg.fert.hm*(0.9+fr()*0.2);
+      const lean=t*rx*0.08+(fr()*2-1)*rx*0.03, hx=x+lean, hy=by-fh;
+      const hw=0.05*cfg.fert.sz, hh=fh*0.24;
+      out+=`<line x1="${q(x)}" y1="${q(by)}" x2="${q(hx)}" y2="${q(hy+hh)}" stroke="${fink}" stroke-width="1" vector-effect="non-scaling-stroke"/>`;
+      out+=`<ellipse cx="${q(hx)}" cy="${q(hy+hh*0.5)}" rx="${q3(hw)}" ry="${q(hh)}" transform="rotate(${q(lean/rx*20)} ${q(hx)} ${q(hy+hh*0.5)})" fill="${cfg.fert.col}" stroke="rgba(0,0,0,.18)" stroke-width="0.5" vector-effect="non-scaling-stroke"/>`;
+    }
+  }
+  return out;
+}
 // darken a #rrggbb fill so a grass's blade strokes read against the soil
 function elevDarken(hex,amt){
   const m=/^#?([0-9a-f]{6})$/i.exec(hex||''); if(!m) return 'rgba(0,0,0,.5)';
@@ -1145,6 +1205,9 @@ function drawElevation(svg,bed,lay,view,topH){
         while(frag.firstChild) g.appendChild(frag.firstChild);
       }else if(pl.cat==='Herb' && ELEV_HERB[it.pid]){
         const frag=document.createElementNS(SVGNS,'g'); frag.innerHTML=elevHerbMarkup(it,baseX,baseY,rx,ch,rnd);
+        while(frag.firstChild) g.appendChild(frag.firstChild);
+      }else if(pl.cat==='Fern' && ELEV_FERN[it.pid]){
+        const frag=document.createElementNS(SVGNS,'g'); frag.innerHTML=elevFernMarkup(it,baseX,baseY,rx,ch);
         while(frag.firstChild) g.appendChild(frag.firstChild);
       }else{
         const p=document.createElementNS(SVGNS,'path');
