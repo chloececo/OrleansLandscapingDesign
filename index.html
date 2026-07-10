@@ -871,6 +871,105 @@ function elevFernMarkup(it,cx,by,rx,ch){
   }
   return out;
 }
+// ---- Per-species vine icons (picked in the Vine Icon Studio artifact). ----
+// trumpethoneysuckle = "fan trellis": stems ride the rays of a wooden fan, trumpet
+// clusters near the tips. virginiacreeper = "free blanket": a shingled mass of
+// palmate five-leaflet leaves standing on its own stems, blue berries on red stalks.
+// Support/stem geometry scales with the plant (x-values ×rx, heights ×ch); leaf and
+// flower sizes are real feet like the grass plumes, so strokes stay in feet too.
+const ELEV_VINE={
+ trumpethoneysuckle:{fc:'#5f8a4f',dk:.45,sup:'fan',supW:2,supH:.86,nstems:3,amp:.16,twist:2,spreadTop:.9,hm:.9,env:'grow',leaf:'pair',leafEvery:3,leafSz:.46,acc:{type:'trumpet',col:'#d1495b',n:7,t0:.55,t1:1}},
+ virginiacreeper:{fc:'#6b8e4e',dk:.45,stemCol:'#6b5138',stemsC:[{x0:-.6,hm:.58},{x0:-.2,hm:.76},{x0:.25,hm:.7},{x0:.6,hm:.54}],amp:.3,twist:3,blanket:{w:1.65,h:.52,md:.44,dens:2.33},leaf:'palm',leafEvery:3,leafSz:.48,acc:{type:'berry',col:'#3a4a6b',n:3,t0:.55,t1:.95}}
+};
+// two-quadratic leaflet lens (same construction as the fern pinnae)
+function elevVineLens(px,py,vx,vy,len,w,curl){
+  const q=n=>n.toFixed(2);
+  const ex=px+vx*len,ey=py+vy*len,wx=-vy,wy=vx;
+  const mx=(px+ex)/2,my=(py+ey)/2,bd=len*curl,ww=len*w;
+  return `M ${q(px)} ${q(py)} Q ${q(mx+wx*(2*bd+2*ww))} ${q(my+wy*(2*bd+2*ww))} ${q(ex)} ${q(ey)} Q ${q(mx+wx*(2*bd-2*ww))} ${q(my+wy*(2*bd-2*ww))} ${q(px)} ${q(py)} Z `;
+}
+function elevVineMarkup(it,cx,by,rx,ch){
+  const cfg=ELEV_VINE[it.pid]; if(!cfg) return '';
+  const q=n=>n.toFixed(2);
+  const rnd=elevRngStr(it.pid+(cfg.rs?('#'+cfg.rs):''));
+  const ink=cfg.stemCol||elevDarken(cfg.fc,cfg.dk);
+  const pal=[cfg.fc,elevDarken(cfg.fc,.1),elevDarken(cfg.fc,.18)];
+  const leafP=(d,col)=>`<path d="${d}" fill="${col}" stroke="rgba(0,0,0,.12)" stroke-width="0.02" stroke-linejoin="round"/>`;
+  const palm=(px,py,ang,sz)=>{let d='';for(let k=-2;k<=2;k++){const a=ang+k*0.5;d+=elevVineLens(px,py,Math.cos(a),Math.sin(a),sz*(1-Math.abs(k)*0.16),0.20,0.03);}return d;};
+  const pair=(p,tx,ty,sz)=>{let d='';const nx=-ty,ny=tx;for(const s of[1,-1]){const vx0=nx*s+tx*0.3,vy0=ny*s+ty*0.3,vl=Math.hypot(vx0,vy0)||1;d+=elevVineLens(p[0],p[1],vx0/vl,vy0/vl,sz,0.26,0.04);}return d;};
+  let out='';
+  if(cfg.sup==='fan'){                                  // wooden fan trellis (trunk wood)
+    const w=cfg.supW*rx, h=cfg.supH*ch, n=5;
+    for(let i=0;i<n;i++){const f=i/(n-1)*2-1,th=h*(1-Math.abs(f)*0.10);
+      out+=`<line x1="${q(cx+f*0.10)}" y1="${q(by-0.1)}" x2="${q(cx+f*w/2)}" y2="${q(by-th)}" stroke="#9c7a55" stroke-width="0.07"/>`;}
+    for(const gb of [0.55,0.82]){const pts=[];
+      for(let i=0;i<n;i++){const f=i/(n-1)*2-1;pts.push([cx+f*w/2*gb,by-h*(1-Math.abs(f)*0.10)*gb]);}
+      out+=`<path d="${elevSmooth(pts,false)}" fill="none" stroke="#9c7a55" stroke-width="0.055"/>`;}
+  }
+  const list=cfg.stemsC||Array.from({length:cfg.nstems},(_,s)=>{const f=cfg.nstems>1?s/(cfg.nstems-1)*2-1:0;return {x0:0,lean:(cfg.spreadTop||0)*f};});
+  const anchors=[]; let Hmax=1;
+  const stems=list.map(st=>{
+    const N=44,pts=[],amp=(st.amp!=null?st.amp:cfg.amp)*(0.85+rnd()*0.3);
+    const tw=(st.twist||cfg.twist)*(0.9+rnd()*0.2),ph=rnd()*Math.PI*2;
+    const H=ch*(st.hm||cfg.hm)*(0.95+rnd()*0.1),env=st.env||cfg.env;
+    Hmax=Math.max(Hmax,H);
+    for(let i=0;i<=N;i++){const t=i/N;
+      const e=env==='grow'?Math.pow(t,0.7):1;           // twine widens as it climbs
+      pts.push([cx+(st.x0||0)*rx+(st.lean||0)*rx*t+Math.sin(ph+t*tw*2*Math.PI)*amp*e,by-H*t]);}
+    return pts;});
+  stems.forEach(pts=>{
+    out+=`<path d="${elevSmooth(pts,false)}" fill="none" stroke="${ink}" stroke-width="0.055" stroke-linecap="round"/>`;
+    for(let i=4;i<pts.length;i+=4)anchors.push(pts[i]);});
+  stems.forEach(pts=>{                                  // leaves along each stem
+    const N=pts.length-1;
+    for(let i=Math.round(N*0.07);i<N-1;i+=cfg.leafEvery){
+      const p=pts[i],p0=pts[Math.max(0,i-1)],p2=pts[Math.min(N,i+1)];
+      let tx=p2[0]-p0[0],ty=p2[1]-p0[1];const tl=Math.hypot(tx,ty)||1;tx/=tl;ty/=tl;
+      if(ty>0){tx=-tx;ty=-ty;}                          // tangent points up the stem
+      const col=pal[Math.floor(rnd()*pal.length)],sz=cfg.leafSz*(0.8+rnd()*0.4);
+      if(cfg.leaf==='palm'){const s=(Math.floor(i/cfg.leafEvery)%2)?1:-1;
+        out+=leafP(palm(p[0],p[1],(s>0?0.5:Math.PI-0.5)+(rnd()*2-1)*0.35,sz),col);
+      }else out+=leafP(pair(p,tx,ty,sz),col);
+    }});
+  if(cfg.blanket){                                      // shingled leaf mass (Poisson-spaced)
+    const b=cfg.blanket,w=b.w*rx,h=b.h*ch,md2=b.md*b.md,n=Math.round(w*h*b.dens),pts=[];
+    for(let i=0;i<n*50&&pts.length<n;i++){
+      const p=[cx+(rnd()*2-1)*w/2,by-0.3-rnd()*(h-0.5)];
+      let ok=true;for(const o of pts){const dx=o[0]-p[0],dy=o[1]-p[1];if(dx*dx+dy*dy<md2){ok=false;break;}}
+      if(ok)pts.push(p);}
+    pts.sort((a,b2)=>a[1]-b2[1]);                       // upper leaves first so lower shingle over
+    pts.forEach(p=>{const col=pal[Math.floor(rnd()*pal.length)];
+      out+=leafP(palm(p[0],p[1],(p[0]>=cx?0.5:Math.PI-0.5)+(rnd()*2-1)*0.45,cfg.leafSz*(0.8+rnd()*0.4)),col);
+      anchors.push(p);});
+  }
+  if(cfg.acc){                                          // trumpet / berry clusters at spaced anchors
+    const a=cfg.acc,zone=anchors.filter(p=>{const hf=(by-p[1])/Hmax;return hf>=a.t0&&hf<=a.t1;});
+    for(let i=zone.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));const t2=zone[i];zone[i]=zone[j];zone[j]=t2;}
+    const chosen=[];
+    for(const p of zone){if(chosen.length>=a.n)break;
+      if(chosen.every(c2=>Math.hypot(c2[0]-p[0],c2[1]-p[1])>=0.55))chosen.push(p);}
+    chosen.forEach(p=>{
+      if(a.type==='trumpet'){
+        const base=-Math.PI/2+(p[0]>=cx?0.35:-0.35)+(rnd()*2-1)*0.3,nt=4+Math.floor(rnd()*2);
+        for(let i=0;i<nt;i++){
+          const an=base+(i-(nt-1)/2)*0.5+(rnd()*2-1)*0.1,len=0.42;
+          const vx=Math.cos(an),vy=Math.sin(an),wx=-vy,wy=vx;
+          const ex=p[0]+vx*len,ey=p[1]+vy*len,w=len*0.20;
+          out+=`<path d="M ${q(p[0])} ${q(p[1])} Q ${q(p[0]+vx*len*0.55+wx*w*0.3)} ${q(p[1]+vy*len*0.55+wy*w*0.3)} ${q(ex+wx*w)} ${q(ey+wy*w)} L ${q(ex-wx*w)} ${q(ey-wy*w)} Q ${q(p[0]+vx*len*0.55-wx*w*0.3)} ${q(p[1]+vy*len*0.55-wy*w*0.3)} ${q(p[0])} ${q(p[1])} Z" fill="${a.col}" stroke="rgba(0,0,0,.18)" stroke-width="0.025" stroke-linejoin="round"/>`+
+            `<circle cx="${q(ex+vx*len*0.14)}" cy="${q(ey+vy*len*0.14)}" r="0.035" fill="#f2c14e"/>`;
+        }
+      }else{
+        const nb=5+Math.floor(rnd()*3);
+        for(let i=0;i<nb;i++){const f=nb>1?i/(nb-1):0.5,an=Math.PI*(0.12+0.76*f);
+          const bx=p[0]+Math.cos(an)*0.30*(0.6+rnd()*0.7),byy=p[1]+Math.abs(Math.sin(an))*0.26*(0.6+rnd()*0.7)+0.07;
+          out+=`<line x1="${q(p[0])}" y1="${q(p[1])}" x2="${q(bx)}" y2="${q(byy)}" stroke="#c1402f" stroke-width="0.022"/>`+
+            `<circle cx="${q(bx)}" cy="${q(byy)}" r="0.052" fill="${a.col}" stroke="rgba(0,0,0,.2)" stroke-width="0.015"/>`;
+        }
+      }
+    });
+  }
+  return out;
+}
 // darken a #rrggbb fill so a grass's blade strokes read against the soil
 function elevDarken(hex,amt){
   const m=/^#?([0-9a-f]{6})$/i.exec(hex||''); if(!m) return 'rgba(0,0,0,.5)';
@@ -1208,6 +1307,12 @@ function drawElevation(svg,bed,lay,view,topH){
         while(frag.firstChild) g.appendChild(frag.firstChild);
       }else if(pl.cat==='Fern' && ELEV_FERN[it.pid]){
         const frag=document.createElementNS(SVGNS,'g'); frag.innerHTML=elevFernMarkup(it,baseX,baseY,rx,ch);
+        while(frag.firstChild) g.appendChild(frag.firstChild);
+      }else if(pl.cat==='Vine' && ELEV_VINE[it.pid]){
+        const frag=document.createElementNS(SVGNS,'g'); frag.innerHTML=elevVineMarkup(it,baseX,baseY,rx,ch);
+        while(frag.firstChild) g.appendChild(frag.firstChild);
+      }else if(pl.cat==='Perennial' && ELEV_PEREN[it.pid]){
+        const frag=document.createElementNS(SVGNS,'g'); frag.innerHTML=elevPerenMarkup(it,baseX,baseY,rx,ch);
         while(frag.firstChild) g.appendChild(frag.firstChild);
       }else{
         const p=document.createElementNS(SVGNS,'path');
