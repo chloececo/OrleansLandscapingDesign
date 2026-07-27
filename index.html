@@ -1562,7 +1562,17 @@ function elevHerbMarkup(it,cx,gy,rx,ch,rnd){
 // each topped by a small six-petaled starry trumpet. Geometry is in feet; blade and
 // petal widths are real feet, scape strokes stay screen-px like the other icons.
 const ELEV_PEREN={
-  orangedaylily:{rs:6, ns:4, fr:0.34, col:'#e0812f', throat:'#8a4416', lc:'#5f8f3f'}
+  orangedaylily:{kind:'daylily', rs:6, ns:4, fr:0.34, col:'#e0812f', throat:'#8a4416', lc:'#5f8f3f'},
+  daylily:{kind:'daylily', rs:6, ns:4, fr:0.34, col:'#e8a13c', throat:'#7a4416', lc:'#5f8f3f'},
+  lavender:{kind:'spike', rs:2, fol:'#9aa585', col:'#a08fd2', moundH:0.54, stemUp:0.14, spreadX:0.92, stems:11, lean:0.05, spikeLen:0.5, fat:0.075, whorl:false},
+  salvia:{kind:'spike', rs:8, fol:'#4e6a42', col:'#6d52b4', moundH:0.51, stemUp:0.06, spreadX:0.6, stems:11, lean:0.04, spikeLen:0.5, fat:0.09, whorl:true},
+  catmint:{kind:'catmint', rs:10, fol:'#8b9a76', col:'#8b9ad2', moundH:0.57, leafGap:0.11, leafLen:0.16, flGap:0.13, fsz:0.046},
+  coneflower:{kind:'daisy', type:'cone', rs:9, fol:'#4e6840', col:'#d885ae', stemsBehind:true, stemLeaves:3, heads:3, petals:13, petL:0.37, petW:0.06, coneRx:0.15, coneRy:0.2, droop:0.095, cone:'#8c561f'},
+  rudbeckia:{kind:'daisy', type:'flat', rs:7, fol:'#4e6840', col:'#f3c94e', noBush:true, stemLeaves:6, rot:0.25, heads:3, petals:13, petL:0.34, petW:0.068, coneRx:0.145, cone:'#2c1c0b'},
+  hosta:{kind:'broad', rs:7, fol:'#82ac62', leaves:6, leafW:0.64, scape:true, bells:5, col:'#c8c0e8'},
+  heuchera:{kind:'lobed', rs:10, fol:'#8f4a5c', leaves:7, leafW:0.26, bloom:true, stems:7, col:'#da8298'},
+  astilbe:{kind:'plume', rs:8, plumes:5, plumeW:0.17, col:'#c83f52'},
+  sedum:{kind:'corymb', rs:9, fol:'#7d8e6e', stems:4, pairs:3, leafLen:0.165, headW:0.31, col:'#d0889e'}
 };
 function elevDaylilyFlower(x,y,fr,col,throat,rnd){
   const q=n=>n.toFixed(2); let s='';const rot=rnd()*0.6;
@@ -1572,21 +1582,149 @@ function elevDaylilyFlower(x,y,fr,col,throat,rnd){
     s+=`<path d="M ${q(x)} ${q(y)} Q ${q(mx+vx*w)} ${q(my+vy*w)} ${q(tx)} ${q(ty)} Q ${q(mx-vx*w)} ${q(my-vy*w)} ${q(x)} ${q(y)} Z" fill="${col}" stroke="${elevDarken(col,0.25)}" stroke-width="0.5" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;}
   return s+`<circle cx="${q(x)}" cy="${q(y)}" r="${q(fr*0.2)}" fill="${throat}"/>`;
 }
-function elevPerenMarkup(it,cx,baseY,rx,ch){
-  const cfg=ELEV_PEREN[it.pid]; if(!cfg) return '';
-  const q=n=>n.toFixed(2), rnd=elevRngStr(it.pid+(cfg.rs?('#'+cfg.rs):''));
-  const lh=ch*0.52, lc=cfg.lc; let s='';
-  for(let i=0;i<9;i++){                                   // arching strap leaves
-    const t=(i/8)*2-1, bx=cx+t*rx*0.25, tipX=cx+t*rx*1.15+(rnd()*2-1)*0.06;
-    const h=lh*(0.6+0.4*(1-Math.abs(t)))*(0.85+rnd()*0.3);
+// ---- shared perennial-icon primitives (ported from the plant icon studio) ----
+const PNQ=n=>Number(n).toFixed(3);
+function pnLighten(hex,f){const m=/^#?([0-9a-f]{6})$/i.exec(hex||'');if(!m)return hex;const n=parseInt(m[1],16);
+  const R=n>>16&255,Gc=n>>8&255,B=n&255;return `rgb(${Math.round(R+(255-R)*f)},${Math.round(Gc+(255-Gc)*f)},${Math.round(B+(255-B)*f)})`;}
+function pnFill(d,fill,op,ink,sw){return `<path d="${d}" fill="${fill}" fill-opacity="${op}" stroke="${ink}" stroke-width="${sw}" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;}
+function pnStem(bx,by,cx,cy,tx,ty,col,w){return `<path d="M ${PNQ(bx)} ${PNQ(by)} Q ${PNQ(cx)} ${PNQ(cy)} ${PNQ(tx)} ${PNQ(ty)}" fill="none" stroke="${col}" stroke-width="${w}" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`;}
+function pnPetal(x,y,ang,len,wid,col,stk){const ux=Math.cos(ang),uy=Math.sin(ang),vx=-uy,vy=ux;const tx=x+ux*len,ty=y+uy*len,mx=x+ux*len*0.5,my=y+uy*len*0.5;
+  return `<path d="M ${PNQ(x)} ${PNQ(y)} Q ${PNQ(mx+vx*wid)} ${PNQ(my+vy*wid)} ${PNQ(tx)} ${PNQ(ty)} Q ${PNQ(mx-vx*wid)} ${PNQ(my-vy*wid)} ${PNQ(x)} ${PNQ(y)} Z" fill="${col}" stroke="${stk}" stroke-width="0.5" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;}
+function pnDisc(x,y,r,rnd,col,ink){const ring=[];for(let i=0;i<8;i++){const a=(i/8)*Math.PI*2;ring.push([x+Math.cos(a)*r,y+Math.sin(a)*r]);}
+  return `<path d="${elevScallop(ring,[x,y],0.5,rnd,true)}" fill="${col}" fill-opacity=".96" stroke="${ink||'rgba(0,0,0,.2)'}" stroke-width=".6" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;}
+function pnEgg(x,y,rxv,ryv,rnd,col,ink){const ring=[];for(let i=0;i<9;i++){const a=(i/9)*Math.PI*2;ring.push([x+Math.cos(a)*rxv,y+Math.sin(a)*ryv]);}
+  return `<path d="${elevScallop(ring,[x,y],0.35,rnd,true)}" fill="${col}" fill-opacity=".97" stroke="${ink||'rgba(0,0,0,.24)'}" stroke-width=".6" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;}
+function pnHostaLeaf(bx,by,cpx,cpy,tx,ty,wid,col,ink){const dx=tx-bx,dy=ty-by,l=Math.hypot(dx,dy)||1,nx=-dy/l,ny=dx/l;
+  const rC=[cpx+nx*wid,cpy+ny*wid],lC=[cpx-nx*wid,cpy-ny*wid];
+  let s=`<path d="M ${PNQ(bx)} ${PNQ(by)} Q ${PNQ(rC[0])} ${PNQ(rC[1])} ${PNQ(tx)} ${PNQ(ty)} Q ${PNQ(lC[0])} ${PNQ(lC[1])} ${PNQ(bx)} ${PNQ(by)} Z" fill="${col}" stroke="${ink}" stroke-width=".7" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
+  s+=`<path d="M ${PNQ(bx)} ${PNQ(by)} Q ${PNQ(cpx)} ${PNQ(cpy)} ${PNQ(tx)} ${PNQ(ty)}" fill="none" stroke="${ink}" stroke-width=".5" stroke-opacity=".45" vector-effect="non-scaling-stroke"/>`;return s;}
+function pnAlmond(bx,by,ang,len,wid,fill,stk){const ux=Math.cos(ang),uy=Math.sin(ang),px=Math.cos(ang+Math.PI/2),py=Math.sin(ang+Math.PI/2);
+  const T=[bx+ux*len,by+uy*len],rc=[bx+ux*len*0.5+px*wid,by+uy*len*0.5+py*wid],lc=[bx+ux*len*0.5-px*wid,by+uy*len*0.5-py*wid];
+  return `<path d="M ${PNQ(bx)} ${PNQ(by)} Q ${PNQ(rc[0])} ${PNQ(rc[1])} ${PNQ(T[0])} ${PNQ(T[1])} Q ${PNQ(lc[0])} ${PNQ(lc[1])} ${PNQ(bx)} ${PNQ(by)} Z" fill="${fill}" fill-opacity=".95" stroke="${stk}" stroke-width=".7" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;}
+// lavender / salvia — fat butterfly-bush cones emerging from a mound on short stems
+function pnSpike(cx,baseY,rx,ch,c,rnd){
+  const fInk=elevDarken(c.fol,0.32), moundH=ch*c.moundH;
+  let s=pnFill(elevBush(cx,baseY,rx*0.98,moundH,rnd,0.5),c.fol,0.92,fInk,0.9);
+  const n=c.stems, items=[];
+  for(let i=0;i<n;i++){const t=n>1?((i+0.5)/n)*2-1:0;const jx=(rnd()*2-1)*0.05;const bx=cx+t*rx*c.spreadX+jx;
+    const dome=Math.sqrt(Math.max(0,1-t*t));const surfY=baseY-moundH*(0.5+0.45*dome);
+    const stemUp=ch*c.stemUp*(0.6+rnd()*0.8);const lean=t*c.lean;const baseX=bx+lean*0.4, bY=surfY-stemUp;
+    const spikeLen=ch*c.spikeLen*(0.6+0.55*dome)*(0.88+rnd()*0.24);
+    items.push({bx,surfY,baseX,bY,tipX:baseX+lean*0.25,tipY:bY-spikeLen,spikeLen});}
+  items.forEach(k=>{ s+=pnStem(k.bx,k.surfY+0.04,(k.bx+k.baseX)/2,(k.surfY+k.bY)/2,k.baseX,k.bY,fInk,0.9); });
+  items.sort((a,b)=>a.bY-b.bY).forEach(k=>{const w0=ch*c.fat;
+    s+=`<path d="${elevConePath(k.baseX,k.bY,k.tipX,k.tipY,w0,rnd)}" fill="${c.col}" fill-opacity=".95" stroke="rgba(0,0,0,.18)" stroke-width=".6" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
+    if(c.whorl){const nb=Math.max(2,Math.round(k.spikeLen/(w0*1.6)));for(let d=0;d<nb;d++){const f=(d+0.5)/nb;const wx=k.baseX+(k.tipX-k.baseX)*f,wy=k.bY+(k.tipY-k.bY)*f;s+=`<circle cx="${PNQ(wx)}" cy="${PNQ(wy)}" r="${PNQ(w0*0.4*(1-f*0.5))}" fill="${elevDarken(c.col,0.32)}" fill-opacity=".75"/>`;}}});
+  return s;
+}
+// catmint — oregano/sage-style leafy almond-leaf mound veiled in lavender-blue bloom
+function pnCatmint(cx,baseY,rx,ch,c,rnd){
+  const fol=c.fol, ink=elevDarken(fol,0.32), moundH=ch*c.moundH;
+  let s=pnFill(elevBush(cx,baseY,rx,moundH,rnd,0.5),fol,0.82,ink,0.9);
+  const lpts=elevScatter(cx,baseY-ch*0.02,rx*0.95,moundH*0.98,c.leafGap,rnd,ch*0.03,0);
+  lpts.forEach(p=>{const ang=-Math.PI/2+(rnd()*2-1)*1.25;const len=c.leafLen*(0.75+rnd()*0.5);s+=pnAlmond(p[0],p[1],ang,len,len*0.42,rnd()>0.5?fol:elevDarken(fol,0.1),ink);});
+  const fpts=elevScatter(cx,baseY-ch*0.05,rx*0.92,moundH*1.04,c.flGap,rnd,ch*0.05,0);
+  fpts.forEach(p=>{const rr=c.fsz*(0.7+rnd()*0.5);s+=`<circle cx="${PNQ(p[0])}" cy="${PNQ(p[1])}" r="${PNQ(rr)}" fill="${c.col}" fill-opacity=".9"/>`;if(rnd()>0.6)s+=`<circle cx="${PNQ(p[0])}" cy="${PNQ(p[1])}" r="${PNQ(rr*0.5)}" fill="${elevDarken(c.col,0.2)}" fill-opacity=".8"/>`;});
+  return s;
+}
+// coneflower (cone) / rudbeckia (flat) — stems topped with composite daisies
+function pnDaisy(cx,baseY,rx,ch,c,rnd){
+  const fInk=elevDarken(c.fol,0.32);let s='';
+  const heads=c.heads, arr=[];
+  for(let i=0;i<heads;i++){const t=heads>1?(i/(heads-1))*2-1:0;const hx=cx+t*rx*0.72+(rnd()*2-1)*0.05;const hh=ch*(0.86+0.14*(1-Math.abs(t)))*(0.94+rnd()*0.08);arr.push({t,hx,hy:baseY-hh,bx:cx+t*0.08});}
+  const drawStems=()=>{let d='';arr.forEach(k=>{
+    d+=pnStem(k.bx,baseY-ch*0.02,cx+k.t*rx*0.4,baseY-ch*0.5,k.hx,k.hy+c.petL*0.4,fInk,1.0);
+    const nlv=c.stemLeaves||1, f0=c.stemsBehind?0.46:0.28, span=c.stemsBehind?0.32:0.5;
+    for(let j=1;j<=nlv;j++){const f=f0+(nlv>1?(j-1)/(nlv-1)*span:0.14);const lx=k.bx+(k.hx-k.bx)*f, ly=(baseY-ch*0.02)+((k.hy+c.petL*0.4)-(baseY-ch*0.02))*f;const side=(j%2?1:-1)*(k.t>=0?1:-1);d+=pnPetal(lx,ly,(-Math.PI/2)+side*0.95,ch*0.16*(1-f*0.4),ch*0.05,c.fol,fInk);}});return d;};
+  if(c.stemsBehind){s=drawStems();s+=pnFill(elevBush(cx,baseY,rx*0.8,ch*0.3,rnd,0.5),c.fol,0.95,fInk,0.9);}
+  else if(c.noBush){s=drawStems();}
+  else{s=pnFill(elevBush(cx,baseY,rx*0.72,ch*0.22,rnd,0.5),c.fol,0.85,fInk,0.9);s+=drawStems();}
+  arr.sort((a,b)=>a.hy-b.hy).forEach(k=>{const np=c.petals;
+    if(c.type==='cone'){const rootY=k.hy+c.coneRy*0.5;
+      for(let j=0;j<np;j++){const a=Math.PI/2+((j/(np-1))-0.5)*Math.PI*1.55;const rx0=k.hx+Math.cos(a)*c.coneRx*0.7, ry0=rootY+Math.sin(a)*c.coneRx*0.5;s+=pnPetal(rx0,ry0,a,c.petL+c.droop*Math.max(0,Math.sin(a)),c.petW,c.col,elevDarken(c.col,0.28));}
+      s+=pnEgg(k.hx,k.hy-c.coneRy*0.4,c.coneRx,c.coneRy,rnd,c.cone,'rgba(0,0,0,.26)');
+    }else{for(let j=0;j<np;j++){const a=(j/np)*Math.PI*2+c.rot;s+=pnPetal(k.hx+Math.cos(a)*c.coneRx*0.8,k.hy+Math.sin(a)*c.coneRx*0.8,a,c.petL,c.petW,c.col,elevDarken(c.col,0.26));}
+      s+=pnDisc(k.hx,k.hy,c.coneRx,rnd,c.cone,'rgba(0,0,0,.3)');s+=`<circle cx="${PNQ(k.hx)}" cy="${PNQ(k.hy)}" r="${PNQ(c.coneRx*0.5)}" fill="${pnLighten(c.cone,0.16)}"/>`;}});
+  return s;
+}
+// hosta — low wide spreading clump of broad smooth arching leaves + bell scape
+function pnBroad(cx,baseY,rx,ch,c,rnd){
+  const lc=c.fol, ink=elevDarken(lc,0.32);let s='';
+  s+=`<ellipse cx="${PNQ(cx)}" cy="${PNQ(baseY-0.02)}" rx="${PNQ(rx*0.98)}" ry="0.1" fill="${elevDarken(lc,0.3)}" fill-opacity=".4"/>`;
+  const nl=c.leaves, leaves=[], crownY=baseY-0.02;
+  for(let i=0;i<nl;i++){const t=nl>1?(i/(nl-1))*2-1:0;const at=Math.abs(t);
+    const A=t*1.42;const sx=Math.sin(A), sy=-Math.cos(A);const len=ch*(0.6+0.32*at)*(0.92+rnd()*0.12);
+    const tx=cx+sx*len*rx*0.95, ty=crownY+sy*len+at*at*len*0.7;const cpx=cx+sx*len*rx*0.5, cpy=crownY+sy*len*0.62-len*0.14;
+    const wid=c.leafW*(0.92+0.08*(1-at));leaves.push({t,at,tx,ty,cpx,cpy,wid});}
+  leaves.sort((a,b)=>b.at-a.at);
+  leaves.forEach(L=>{const col=L.at>0.6?elevDarken(lc,0.14):(L.at>0.3?elevDarken(lc,0.06):lc);s+=pnHostaLeaf(cx+L.t*0.03,crownY,L.cpx,L.cpy,L.tx,L.ty,L.wid,col,ink);});
+  if(c.scape){const sxp=cx+rx*0.2, ty=baseY-ch*1.1;s+=pnStem(cx+0.04,baseY-ch*0.5,sxp,baseY-ch*0.82,sxp,ty,elevDarken(lc,0.2),0.8);
+    for(let b=0;b<c.bells;b++){const by=ty+0.12+b*0.16;s+=`<circle cx="${PNQ(sxp+(b%2?0.06:-0.05))}" cy="${PNQ(by)}" r="0.07" fill="${c.col}" stroke="rgba(0,0,0,.2)" stroke-width=".5" vector-effect="non-scaling-stroke"/>`;}}
+  return s;
+}
+// heuchera / coral bells — solid lobed foliage mound + airy bell wands
+function pnLobed(cx,baseY,rx,ch,c,rnd){
+  const lc=c.fol, ink=elevDarken(lc,0.32), moundH=Math.min(ch*0.5,rx*0.85);let s='';
+  s+=`<ellipse cx="${PNQ(cx)}" cy="${PNQ(baseY-0.02)}" rx="${PNQ(rx*0.95)}" ry="0.09" fill="${elevDarken(lc,0.3)}" fill-opacity=".45"/>`;
+  s+=pnFill(elevBush(cx,baseY,rx*0.94,moundH,rnd,0.58),lc,0.97,ink,0.85);
+  const nl=c.leaves;
+  for(let i=0;i<nl;i++){const t=nl>1?(i/(nl-1))*2-1:0;const cxp=cx+t*rx*0.5+(rnd()*2-1)*0.04, cyp=baseY-moundH*(0.35+0.4*(1-Math.abs(t)))-rnd()*0.05;const rr=c.leafW*(0.85+0.2*(1-Math.abs(t))), col=i%2?elevDarken(lc,0.12):pnLighten(lc,0.08);s+=`<path d="${elevBlob(cxp,cyp,rr,rr*0.72,rnd)}" fill="${col}" fill-opacity=".7" stroke="${ink}" stroke-width=".4" stroke-opacity=".55" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;}
+  if(c.bloom){const ns=c.stems, bY=baseY-moundH*0.92;
+    for(let i=0;i<ns;i++){const t=ns>1?(i/(ns-1))*2-1:0;const bx=cx+t*rx*0.34;const tx=bx+t*rx*0.2+(rnd()*2-1)*0.03, ty=baseY-ch*(0.94+rnd()*0.06);s+=pnStem(bx,bY,bx+t*0.06,(bY+ty)/2,tx,ty,elevDarken(c.col,0.2),0.55);const nb=4+Math.round(rnd()*2);for(let b=0;b<nb;b++){const f=b/(nb-1);const wy=ty+f*(bY-ty)*0.55;const wx=tx+(bx-tx)*((bY-wy)/(bY-ty))+(b%2?0.035:-0.035);s+=`<circle cx="${PNQ(wx)}" cy="${PNQ(wy)}" r="${PNQ(0.026+f*0.014)}" fill="${c.col}" fill-opacity=".88" stroke="rgba(0,0,0,.15)" stroke-width=".4" vector-effect="non-scaling-stroke"/>`;}}}
+  return s;
+}
+// astilbe — ferny foliage mound with leaves throughout + tall feathery plumes
+function pnPlume(cx,baseY,rx,ch,c,rnd){
+  const fol='#3f6a3a', ink=elevDarken(fol,0.32), moundH=ch*0.42;let s='';
+  s+=pnFill(elevBush(cx,baseY,rx*0.94,moundH,rnd,0.6),fol,0.95,ink,0.85);
+  const fpts=elevScatter(cx,baseY-ch*0.04,rx*0.9,moundH*0.95,ch*0.15,rnd,ch*0.1,0);
+  fpts.forEach(p=>{const t=(p[0]-cx)/rx;const ang=(-Math.PI/2)+t*0.85+(rnd()*2-1)*0.4;const len=ch*0.12*(0.85+rnd()*0.35);s+=pnPetal(p[0],p[1],ang,len,len*0.34,rnd()>0.5?elevDarken(fol,0.05):pnLighten(fol,0.06),ink);});
+  const np=c.plumes;
+  for(let i=0;i<np;i++){const t=np>1?(i/(np-1))*2-1:0;const px=cx+t*rx*0.5;const ph=ch*(0.8+0.2*(1-Math.abs(t)))*(0.9+rnd()*0.1), topY=baseY-ph, botY=baseY-ph*0.42;
+    const stemBaseY=baseY-moundH*Math.sqrt(Math.max(0,1-(t*0.8)*(t*0.8)))*0.7-0.02-rnd()*0.05;
+    s+=pnStem(px+(rnd()*2-1)*0.03,stemBaseY,px+t*0.05,(stemBaseY+botY)/2,px,botY,elevDarken(fol,0.1),1.0);
+    const w=c.plumeW, steps=7;let ring=[];
+    for(let a=0;a<steps;a++){const f=a/(steps-1);const yy=topY+f*(botY-topY);const half=w*(0.25+0.75*f);ring.push([px-half,yy]);}
+    for(let a=steps-1;a>=0;a--){const f=a/(steps-1);const yy=topY+f*(botY-topY);const half=w*(0.25+0.75*f);ring.push([px+half,yy]);}
+    s+=`<path d="${elevScallop(ring,[px,(topY+botY)/2],0.6,rnd,true)}" fill="${c.col}" fill-opacity=".9" stroke="${elevDarken(c.col,0.24)}" stroke-width=".5" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
+    for(let d=0;d<10;d++){const f=rnd();const yy=topY+f*(botY-topY);const half=w*(0.25+0.75*f);s+=`<circle cx="${PNQ(px+(rnd()*2-1)*half)}" cy="${PNQ(yy)}" r="${PNQ(w*0.12)}" fill="${pnLighten(c.col,0.28)}" fill-opacity=".8"/>`;}}
+  return s;
+}
+// sedum — fleshy leaf-clad stems + broad flat corymb heads
+function pnCorymb(cx,baseY,rx,ch,c,rnd){
+  const lc=c.fol, ink=elevDarken(lc,0.32);let s='';
+  const ns=c.stems, stems=[];
+  for(let i=0;i<ns;i++){const t=ns>1?(i/(ns-1))*2-1:0;const bx=cx+t*rx*0.62;const ty=baseY-ch*(0.84+0.16*(1-Math.abs(t)))*(0.94+rnd()*0.06);stems.push({t,bx,tx:bx+t*0.14,ty});}
+  stems.forEach(k=>{ s+=pnStem(k.bx,baseY-0.03,(k.bx+k.tx)/2,baseY-ch*0.5,k.tx,k.ty+0.14,elevDarken(lc,0.22),3.0); });
+  stems.forEach(k=>{const npair=c.pairs, bx0=k.bx, by0=baseY-0.03, dx=k.tx-bx0, dy=(k.ty+0.14)-by0;
+    for(let j=1;j<=npair;j++){const f=(j-0.3)/(npair+0.3);const lx=bx0+dx*f, ly=by0+dy*f;const scale=c.leafLen*(1.15-0.5*f);for(const sg of [-1,1]){const ang=-Math.PI/2+sg*1.05;s+=pnPetal(lx,ly,ang,scale,scale*0.5,sg>0?lc:elevDarken(lc,0.09),ink);}}});
+  stems.sort((a,b)=>a.ty-b.ty).forEach(k=>{const cw=c.headW, ring=[];for(let i=0;i<12;i++){const a=(i/12)*Math.PI*2;ring.push([k.tx+Math.cos(a)*cw,k.ty-cw*0.25+Math.sin(a)*cw*0.42]);}s+=`<path d="${elevScallop(ring,[k.tx,k.ty-cw*0.25],0.55,rnd,true)}" fill="${c.col}" fill-opacity=".96" stroke="${elevDarken(c.col,0.26)}" stroke-width=".6" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;});
+  return s;
+}
+// daylily — fountain of arching strap leaves + six-petal trumpet scapes
+function pnDaylily(cx,baseY,rx,ch,c,rnd){
+  const q=n=>n.toFixed(2), lh=ch*0.52, lc=c.lc; let s='';
+  for(let i=0;i<9;i++){const t=(i/8)*2-1, bx=cx+t*rx*0.25, tipX=cx+t*rx*1.15+(rnd()*2-1)*0.06;const h=lh*(0.6+0.4*(1-Math.abs(t)))*(0.85+rnd()*0.3);
     s+=`<path d="M ${q(bx)} ${q(baseY)} Q ${q(cx+t*rx*0.5)} ${q(baseY-h*1.05)} ${q(tipX)} ${q(baseY-h*0.82)}" fill="none" stroke="${lc}" stroke-width="0.09" stroke-linecap="round"/>`;}
   const sc=elevDarken(lc,0.15);
-  for(let i=0;i<cfg.ns;i++){                              // scapes, each topped with a bloom
-    const t=(i/(cfg.ns-1))*2-1, bx=cx+t*rx*0.15, lean=t*0.3;
-    const topX=bx+lean, topY=baseY-ch*0.95*(0.9+rnd()*0.15);
+  for(let i=0;i<c.ns;i++){const t=(i/(c.ns-1))*2-1, bx=cx+t*rx*0.15, lean=t*0.3;const topX=bx+lean, topY=baseY-ch*0.95*(0.9+rnd()*0.15);
     s+=`<path d="M ${q(bx)} ${q(baseY)} Q ${q(bx+lean*0.4)} ${q((baseY+topY)/2)} ${q(topX)} ${q(topY)}" fill="none" stroke="${sc}" stroke-width="1.1" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`;
-    s+=elevDaylilyFlower(topX,topY-cfg.fr*0.3,cfg.fr,cfg.col,cfg.throat,rnd);}
+    s+=elevDaylilyFlower(topX,topY-c.fr*0.3,c.fr,c.col,c.throat,rnd);}
   return s;
+}
+function elevPerenMarkup(it,cx,baseY,rx,ch){
+  const cfg=ELEV_PEREN[it.pid]; if(!cfg) return '';
+  const rnd=elevRngStr(it.pid+(cfg.rs?('#'+cfg.rs):''));
+  switch(cfg.kind){
+    case 'spike': return pnSpike(cx,baseY,rx,ch,cfg,rnd);
+    case 'catmint': return pnCatmint(cx,baseY,rx,ch,cfg,rnd);
+    case 'daisy': return pnDaisy(cx,baseY,rx,ch,cfg,rnd);
+    case 'broad': return pnBroad(cx,baseY,rx,ch,cfg,rnd);
+    case 'lobed': return pnLobed(cx,baseY,rx,ch,cfg,rnd);
+    case 'plume': return pnPlume(cx,baseY,rx,ch,cfg,rnd);
+    case 'corymb': return pnCorymb(cx,baseY,rx,ch,cfg,rnd);
+    default: return pnDaylily(cx,baseY,rx,ch,cfg,rnd);
+  }
 }
 function drawElevation(svg,bed,lay,view,topH){
   const axis=view.axis;
