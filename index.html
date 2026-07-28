@@ -1572,7 +1572,10 @@ const ELEV_PEREN={
   hosta:{kind:'broad', rs:7, fol:'#82ac62', leaves:6, leafW:0.64, scape:true, bells:5, col:'#c8c0e8'},
   heuchera:{kind:'lobed', rs:10, fol:'#8f4a5c', leaves:7, leafW:0.26, bloom:true, stems:7, col:'#da8298'},
   astilbe:{kind:'plume', rs:8, plumes:5, plumeW:0.17, col:'#c83f52'},
-  sedum:{kind:'corymb', rs:9, fol:'#7d8e6e', stems:4, pairs:3, leafLen:0.165, headW:0.31, col:'#d0889e'}
+  sedum:{kind:'corymb', rs:9, fol:'#7d8e6e', stems:4, pairs:3, leafLen:0.165, headW:0.31, col:'#d0889e'},
+  butterflymilkweed:{kind:"custom",rs:3,bush:{show:true,shape:"dome",wm:0.61,hm:0.32,col:"#5e7d45",op:0.7},stem:{count:10,spread:0.58,lean:0.34,curve:0.03,w:1.4,hm:0.81,hvar:0.11,col:"#5e7d45"},leaf:{mode:"pairs",shape:"lance",col:"#557a3f",len:0.18,wr:0.24,dens:5},flower:{shape:"umbel",place:"tops",col:"#e8741e",sz:0.06,count:6,accent:"#f4a83c"}},
+  swampmilkweed:{kind:"custom",rs:5,bush:{show:true,shape:"mound",wm:0.72,hm:0.24,col:"#4e7048",op:0.9},stem:{count:9,spread:0.55,lean:0.5,curve:0.03,w:1.6,hm:0.92,hvar:0.1,col:"#4e7048"},leaf:{mode:"pairs",shape:"lance",col:"#4e7048",len:0.29,wr:0.21,dens:6},flower:{shape:"umbel",place:"tops",col:"#d76a8a",sz:0.14,count:7,accent:"#eaa0b6"}},
+  wildlupine:{kind:"custom",rs:26,bush:{show:false,shape:"none",wm:0.85,hm:0.3,col:"#4d6f43",op:0.9},stem:{count:5,spread:0.43,lean:0.31,curve:-0.05,w:1.1,hm:0.6,hvar:0.15,col:"#4d6f43"},leaf:{mode:"basal",shape:"palmate",col:"#4d6f43",len:0.61,wr:0.5,dens:5},flower:{shape:"peaspike",place:"tops",col:"#4f6bb0",sz:0.56,count:12,accent:"#8fa8d8"}}
 };
 function elevDaylilyFlower(x,y,fr,col,throat,rnd){
   const q=n=>n.toFixed(2); let s='';const rot=rnd()*0.6;
@@ -1712,10 +1715,160 @@ function pnDaylily(cx,baseY,rx,ch,c,rnd){
     s+=elevDaylilyFlower(topX,topY-c.fr*0.3,c.fr,c.col,c.throat,rnd);}
   return s;
 }
+// ---- universal parametric perennial builder (from the Perennial Icon Studio) ----
+function pnQpt(k,f){const u=1-f;return [u*u*k.bx+2*u*f*k.cxp+f*f*k.topX, u*u*k.rootY+2*u*f*k.cyp+f*f*k.topY];}
+function pnBuildStems(cx,baseY,rx,ch,S,B,rnd){
+  const stems=[],n=Math.max(1,Math.round(S.count));
+  for(let i=0;i<n;i++){
+    const t=n>1?((i+0.5)/n)*2-1:0, jx=(rnd()*2-1)*0.04;
+    const bx=cx+t*rx*S.spread+jx, dome=Math.sqrt(Math.max(0,1-t*t));
+    const rootY=baseY-(B.show?ch*B.hm*0.3*dome:0);
+    const topH=ch*S.hm*(1-S.hvar*rnd()), topX=bx+t*S.lean*rx, topY=baseY-topH;
+    const cxp=(bx+topX)/2+S.curve*rx*(rnd()*0.5+0.75)*(t>=0?1:-1), cyp=(rootY+topY)/2;
+    stems.push({t,bx,rootY,topX,topY,cxp,cyp,topH});
+  }
+  return stems;
+}
+function pnLeaf(x,y,ang,len,shape,wr,col,ink){
+  if(shape==='palmate'){let d='';for(let m=-2;m<=2;m++){const a=ang+m*0.34;d+=pnAlmond(x,y,a,len*(1-Math.abs(m)*0.13),len*0.15,col,ink);}return d;}
+  let wid=len*wr; if(shape==='strap')wid=len*Math.min(wr,0.12);
+  return pnAlmond(x,y,ang,len,wid,col,ink);
+}
+function pnLeaves(cx,baseY,rx,ch,L,stems,rnd){
+  if(L.mode==='none')return '';
+  const ink=elevDarken(L.col,0.34);let s='';
+  if(L.mode==='pairs'||L.mode==='alt'){
+    stems.forEach(k=>{const np=Math.max(1,Math.round(L.dens));
+      for(let j=1;j<=np;j++){const f=0.22+((j-0.5)/np)*0.72, p=pnQpt(k,f);
+        const sides=L.mode==='pairs'?[-1,1]:[(j%2?1:-1)];
+        sides.forEach(sg=>{const ang=-Math.PI/2+sg*(1.0+0.15*rnd());
+          const ln=L.len*(0.8+rnd()*0.35)*(1.05-f*0.35);
+          s+=pnLeaf(p[0],p[1],ang,ln,L.shape,L.wr,rnd()>0.5?L.col:elevDarken(L.col,0.08),ink);});}});
+  } else if(L.mode==='basal'){
+    const nb=Math.max(3,Math.round(L.dens*2.5)), by=baseY-0.02;
+    for(let i=0;i<nb;i++){const t=nb>1?(i/(nb-1))*2-1:0;
+      const ang=-Math.PI/2+t*1.25+(rnd()*2-1)*0.12, bx=cx+t*rx*0.18;
+      const ln=L.len*(0.8+rnd()*0.4)*(1-Math.abs(t)*0.25);
+      s+=pnLeaf(bx,by,ang,ln,L.shape,L.wr,i%2?L.col:elevDarken(L.col,0.08),ink);}
+  } else if(L.mode==='scatter'){
+    const pts=elevScatter(cx,baseY-ch*0.02,rx*0.9,ch*0.5,L.len*0.9,rnd,ch*0.02,0);
+    pts.forEach(p=>{const ang=-Math.PI/2+(rnd()*2-1)*1.2, ln=L.len*(0.75+rnd()*0.5);
+      s+=pnLeaf(p[0],p[1],ang,ln,L.shape,L.wr,rnd()>0.5?L.col:elevDarken(L.col,0.1),ink);});
+  }
+  return s;
+}
+function pnHeadCluster(x,y,sz,ryf,F,rnd){
+  const ry=sz*ryf, cy=y-ry, ink=elevDarken(F.col,0.32), N=10, ring=[];
+  for(let i=0;i<N;i++){const a=(i/N)*Math.PI*2;ring.push([x+Math.cos(a)*sz, cy+Math.sin(a)*ry]);}
+  let s=`<path d="${elevScallop(ring,[x,cy],0.4,rnd,true)}" fill="${F.col}" fill-opacity=".95" stroke="${ink}" stroke-width=".6" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
+  const nf=Math.max(7,Math.round(sz*40));
+  for(let i=0;i<nf;i++){const a=rnd()*Math.PI*2,rr=Math.sqrt(rnd());
+    const fx=x+Math.cos(a)*sz*0.82*rr, fy=cy+Math.sin(a)*ry*0.82*rr-ry*0.08, r=sz*0.13*(0.7+rnd()*0.5);
+    s+=`<circle cx="${PNQ(fx)}" cy="${PNQ(fy)}" r="${PNQ(r)}" fill="${rnd()>0.5?F.accent:pnLighten(F.col,0.16)}" fill-opacity=".92"/>`;
+    if(rnd()>0.62)s+=`<circle cx="${PNQ(fx)}" cy="${PNQ(fy)}" r="${PNQ(r*0.42)}" fill="${ink}" fill-opacity=".55"/>`;}
+  return s;
+}
+function pnHeadDaisy(x,y,sz,F,rnd){
+  const ink=elevDarken(F.col,0.28);let s='';const np=11;
+  for(let j=0;j<np;j++){const a=(j/np)*Math.PI*2;s+=pnPetal(x+Math.cos(a)*sz*0.28,y+Math.sin(a)*sz*0.28,a,sz*0.72,sz*0.16,F.col,ink);}
+  s+=`<circle cx="${PNQ(x)}" cy="${PNQ(y)}" r="${PNQ(sz*0.34)}" fill="${F.accent}" stroke="${elevDarken(F.accent,0.3)}" stroke-width=".5" vector-effect="non-scaling-stroke"/>`;
+  return s;
+}
+function pnHeadPom(x,y,sz,F,rnd){
+  const cy=y-sz*0.55, ink=elevDarken(F.col,0.3);let s='';const n1=14;
+  for(let j=0;j<n1;j++){const a=-Math.PI/2+((j/(n1-1))-0.5)*Math.PI*1.75+(rnd()*2-1)*0.07;
+    s+=pnPetal(x,cy,a,sz*(0.82+rnd()*0.34),sz*0.1,F.col,ink);}
+  const n2=8;
+  for(let j=0;j<n2;j++){const a=-Math.PI/2+((j/(n2-1))-0.5)*Math.PI*1.3;
+    s+=pnPetal(x,cy,a,sz*0.52,sz*0.09,F.accent,ink);}
+  s+=`<circle cx="${PNQ(x)}" cy="${PNQ(cy)}" r="${PNQ(sz*0.17)}" fill="${elevDarken(F.col,0.18)}"/>`;
+  return s;
+}
+function pnSpikePea(x,y,up,F,rnd){
+  const ink=elevDarken(F.col,0.3);let s='';
+  const nw=Math.max(5,Math.round(F.count||up/0.1));   // buds count → higher = closer together
+  const items=[];
+  for(let i=0;i<nw;i++){const f=i/(nw-1),yy=y-f*up,w=up*0.17*(1-f*0.68);items.push({f,yy,w});}
+  items.forEach(it=>{for(const sg of [-1,1]){const col=it.f>0.72?F.accent:F.col;
+    s+=pnPetal(x+sg*it.w*0.28,it.yy,-Math.PI/2+sg*0.82,up*0.15*(1-it.f*0.32),up*0.085,col,ink);
+    s+=`<circle cx="${PNQ(x+sg*it.w)}" cy="${PNQ(it.yy)}" r="${PNQ(up*0.05*(1-it.f*0.3))}" fill="${pnLighten(col,0.2)}" fill-opacity=".92"/>`;}});
+  return s;
+}
+function pnSpikeBrush(x,y,up,F,rnd){
+  const ink=elevDarken(F.col,0.3);let s='';const steps=Math.max(12,Math.round(up/0.05));
+  s+=pnStem(x,y,x,y-up*0.5,x,y-up,elevDarken(F.col,0.1),1.4);
+  for(let i=0;i<steps;i++){const f=i/(steps-1),yy=y-f*up, w=up*0.15*Math.pow(f+0.05,0.45)*(1-f*0.12);
+    for(let h=0;h<3;h++){const sg=(rnd()*2-1),fx=x+sg*w;
+      s+=`<circle cx="${PNQ(fx)}" cy="${PNQ(yy+(rnd()*2-1)*up*0.02)}" r="${PNQ(up*0.05*(0.7+rnd()*0.5))}" fill="${rnd()>0.5?F.col:F.accent}" fill-opacity=".9"/>`;}
+    if(rnd()>0.4){for(const sg of [-1,1])s+=pnStem(x,yy,x+sg*w*0.6,yy-up*0.01,x+sg*w,yy-up*0.02,ink,0.6);}}
+  return s;
+}
+function pnSpikePlume(x,y,up,F,rnd){
+  let s='';const side=(rnd()>0.5?1:-1);
+  const spineX=f=>x+side*up*0.42*f*f, spineY=f=>y-up*f;
+  s+=pnStem(x,y,spineX(0.5),spineY(0.5),spineX(1),spineY(1),elevDarken(F.col,0.15),0.9);
+  const nf=Math.max(24,Math.round(up*70));
+  for(let i=0;i<nf;i++){const f=Math.pow(rnd(),0.7), hw=up*0.3*Math.pow(f,0.6)*(1.05-f*0.25);
+    const lat=(rnd()*2-1)*hw, fx=spineX(f)+lat+side*Math.abs(lat)*0.25, fy=spineY(f)+(rnd()*2-1)*up*0.03;
+    s+=`<circle cx="${PNQ(fx)}" cy="${PNQ(fy)}" r="${PNQ(up*0.045*(0.7+rnd()*0.6))}" fill="${rnd()>0.5?F.col:F.accent}" fill-opacity=".9"/>`;}
+  return s;
+}
+function pnDrawBells(stems,F,rnd){
+  const ink=elevDarken(F.col,0.26);let s='';
+  stems.forEach(k=>{const nb=Math.max(3,Math.round(F.count));
+    for(let j=0;j<nb;j++){const f=0.52+(j/(nb-1||1))*0.46, p=pnQpt(k,f), sg=j%2?1:-1, ang=Math.PI/2+sg*0.75;
+      s+=pnAlmond(p[0],p[1],ang,F.sz*(0.75+rnd()*0.3),F.sz*0.4,F.col,ink);
+      s+=`<circle cx="${PNQ(p[0]+Math.cos(ang)*F.sz*0.9)}" cy="${PNQ(p[1]+Math.sin(ang)*F.sz*0.9)}" r="${PNQ(F.sz*0.16)}" fill="${F.accent}" fill-opacity=".85"/>`;}});
+  return s;
+}
+function pnScatterTop(cx,baseY,rx,topH,count,rnd){
+  const pts=[];for(let i=0;i<Math.max(1,Math.round(count));i++){
+    const t=(rnd()*2-1),ext=Math.sqrt(Math.max(0,1-t*t));
+    const x=cx+t*rx*0.88, y=baseY-topH*(0.5+0.5*ext)*(0.82+rnd()*0.3)-topH*0.04;
+    pts.push([x,y]);}
+  return pts.sort((a,b)=>a[1]-b[1]);
+}
+function pnDrawFlowers(cx,baseY,rx,ch,F,stems,B,rnd){
+  let s='';const sz=F.sz;
+  if(F.shape==='bells'){return pnDrawBells(stems,F,rnd);}
+  const spike={peaspike:pnSpikePea,bottlebrush:pnSpikeBrush,plume:pnSpikePlume}[F.shape];
+  let anchors;
+  if(F.place==='scatter'){
+    const zoneRx=rx*Math.max(0.85,B.show?B.wm:0.9), zoneTop=ch*0.95;
+    anchors=pnScatterTop(cx,baseY,zoneRx,zoneTop,F.count,rnd);
+  } else { anchors=stems.map(k=>[k.topX,k.topY]).sort((a,b)=>a[1]-b[1]); }
+  anchors.forEach(a=>{
+    if(spike){s+=spike(a[0],a[1],sz,F,rnd);}
+    else if(F.shape==='daisy'){s+=pnHeadDaisy(a[0],a[1],sz,F,rnd);}
+    else if(F.shape==='pom'){s+=pnHeadPom(a[0],a[1],sz,F,rnd);}
+    else if(F.shape==='corymb'){s+=pnHeadCluster(a[0],a[1],sz,0.38,F,rnd);}
+    else if(F.shape==='dots'){const nf=Math.max(5,Math.round(F.count));for(let i=0;i<nf;i++){const aa=rnd()*Math.PI*2,rr=Math.sqrt(rnd())*sz;s+=`<circle cx="${PNQ(a[0]+Math.cos(aa)*rr)}" cy="${PNQ(a[1]+Math.sin(aa)*rr*0.7)}" r="${PNQ(sz*0.22)}" fill="${rnd()>0.5?F.col:F.accent}" fill-opacity=".9"/>`;}}
+    else {s+=pnHeadCluster(a[0],a[1],sz,0.6,F,rnd);}
+  });
+  return s;
+}
+function pnCustom(cx,baseY,rx,ch,c,rnd){
+  const B=c.bush,S=c.stem,L=c.leaf,F=c.flower;let s='';
+  s+=`<ellipse cx="${PNQ(cx)}" cy="${PNQ(baseY-0.01)}" rx="${PNQ(rx*(B.show?B.wm:0.8)*0.98)}" ry="${PNQ(Math.max(0.05,rx*0.09))}" fill="rgba(60,45,20,.16)"/>`;
+  if(B.show && B.shape!=='none'){
+    const bump=B.shape==='dome'?0.32:B.shape==='mound'?0.5:B.shape==='clump'?0.62:0.72;
+    const mRx=rx*B.wm, mH=ch*B.hm, ink=elevDarken(B.col,0.34);
+    if(B.shape==='clump'){
+      for(const o of [[-0.52,0.8,0.62],[0.52,0.8,0.62],[0,1,0.82]])
+        s+=pnFill(elevBush(cx+o[0]*mRx,baseY,mRx*o[2],mH*o[1],rnd,bump),B.col,B.op,ink,0.9);
+    } else { s+=pnFill(elevBush(cx,baseY,mRx,mH,rnd,bump),B.col,B.op,ink,0.9); }
+  }
+  const stems=pnBuildStems(cx,baseY,rx,ch,S,B,rnd);
+  stems.slice().sort((a,b)=>a.topY-b.topY).forEach(k=>{s+=pnStem(k.bx,k.rootY,k.cxp,k.cyp,k.topX,k.topY,S.col,S.w);});
+  s+=pnLeaves(cx,baseY,rx,ch,L,stems,rnd);
+  s+=pnDrawFlowers(cx,baseY,rx,ch,F,stems,B,rnd);
+  return s;
+}
 function elevPerenMarkup(it,cx,baseY,rx,ch){
   const cfg=ELEV_PEREN[it.pid]; if(!cfg) return '';
   const rnd=elevRngStr(it.pid+(cfg.rs?('#'+cfg.rs):''));
   switch(cfg.kind){
+    case 'custom': return pnCustom(cx,baseY,rx,ch,cfg,rnd);
     case 'spike': return pnSpike(cx,baseY,rx,ch,cfg,rnd);
     case 'catnip': return pnCatmint(cx,baseY,rx,ch,cfg,rnd);
     case 'daisy': return pnDaisy(cx,baseY,rx,ch,cfg,rnd);
