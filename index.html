@@ -1576,7 +1576,7 @@ const ELEV_PEREN={
   butterflymilkweed:{kind:"custom",rs:3,bush:{show:true,shape:"dome",wm:0.61,hm:0.32,col:"#5e7d45",op:0.7},stem:{count:10,spread:0.58,lean:0.34,curve:0.03,w:1.4,hm:0.81,hvar:0.11,col:"#5e7d45"},leaf:{mode:"pairs",shape:"lance",col:"#557a3f",len:0.18,wr:0.24,dens:5},flower:{shape:"umbel",place:"tops",col:"#e8741e",sz:0.06,count:6,accent:"#f4a83c"}},
   swampmilkweed:{kind:"custom",rs:5,bush:{show:true,shape:"mound",wm:0.72,hm:0.24,col:"#4e7048",op:0.9},stem:{count:9,spread:0.55,lean:0.5,curve:0.03,w:1.6,hm:0.92,hvar:0.1,col:"#4e7048"},leaf:{mode:"pairs",shape:"lance",col:"#4e7048",len:0.29,wr:0.21,dens:6},flower:{shape:"umbel",place:"tops",col:"#d76a8a",sz:0.14,count:7,accent:"#eaa0b6"}},
   wildlupine:{kind:"custom",rs:26,bush:{show:false,shape:"none",wm:0.85,hm:0.3,col:"#4d6f43",op:0.9},stem:{count:5,spread:0.43,lean:0.31,curve:-0.05,w:1.1,hm:0.6,hvar:0.15,col:"#4d6f43"},leaf:{mode:"basal",shape:"palmate",col:"#4d6f43",len:0.61,wr:0.5,dens:5},flower:{shape:"peaspike",place:"tops",col:"#4f6bb0",sz:0.56,count:12,accent:"#8fa8d8"}},
-  seasidegoldenrod:{kind:'custom',rs:905,bush:{show:false,shape:'none',wm:0.6,hm:0.2,col:'#5c7a3f',op:0.9},stem:{count:3,spread:0.5,lean:0.28,curve:0.15,w:1.1,hm:0.9,hvar:0.12,col:'#5c7a3f'},leaf:{mode:'alt',shape:'lance',col:'#5c7a3f',len:0.32,wr:0.14,dens:6},flower:{shape:'plume',place:'tops',col:'#f2c14e',sz:1.25,count:3,accent:'#f7d777',arch:'out'}},
+  seasidegoldenrod:{kind:'custom',rs:920,bush:{show:true,shape:'mound',wm:0.66,hm:0.66,col:'#5c7a3f',op:0.9},stem:{count:9,spread:0.66,lean:0.24,curve:0.13,w:1.0,hm:0.9,hvar:0.3,base:0.25,extra:[{t:-1.05,hm:0.69}],col:'#5c7a3f'},leaf:{mode:'alt',shape:'lance',col:'#5c7a3f',len:0.3,wr:0.14,dens:7},flower:{shape:'plume',place:'tops',col:'#f2c14e',sz:0.95,count:9,accent:'#f7d777',arch:'out',archK:0.6,tipCurl:0.28}},
   oxeyesunflower:{kind:'custom',rs:912,bush:{show:true,shape:'mound',wm:0.95,hm:0.82,col:'#4e6a3c',op:0.94},stem:{count:5,spread:0.78,lean:0.14,curve:0.05,w:0,hm:0.9,hvar:0.08,col:'#4e6a3c'},leaf:{mode:'none',shape:'lance',col:'#4e6a3c',len:0.28,wr:0.2,dens:10,span:[0.14,0.98]},flower:{shape:'daisy',place:'bush',col:'#f4b400',sz:0.24,gap:2.25,accent:'#5a3a12'}},
   baptisia:{kind:'custom',rs:922,bush:{show:true,shape:'mound',wm:1.0,hm:0.66,col:'#5a7d63',op:0.94},stem:{count:6,spread:0.5,lean:0.03,curve:0.0,w:0,hm:0.9,hvar:0.08,col:'#5a7d63'},leaf:{mode:'none',shape:'palmate',col:'#5a7d63',len:0.2,wr:0.4,dens:5},flower:{shape:'peaspike',place:'bush',col:'#4a6fa5',sz:0.72,gap:0.65,count:9,accent:'#8fa8c8'}},
   cardinalflower:{kind:'custom',rs:932,bush:{show:true,shape:'tuft',wm:0.5,hm:0.18,col:'#3f6a3a',op:0.9},stem:{count:3,spread:0.58,lean:0.03,curve:0.0,w:1.1,hm:0.75,hvar:0.1,col:'#3f6a3a'},leaf:{mode:'pairs',shape:'lance',col:'#3f6a3a',len:0.3,wr:0.16,dens:5},flower:{shape:'bells',place:'upper',col:'#c81e3a',sz:0.32,count:9,accent:'#e0405a'}},
@@ -1735,8 +1735,25 @@ function pnBuildStems(cx,baseY,rx,ch,S,B,rnd){
     const rootY=baseY-(B.show?ch*B.hm*0.3*dome:0);
     const topH=ch*S.hm*(1-S.hvar*rnd()), topX=bx+t*S.lean*rx, topY=baseY-topH;
     const cxp=(bx+topX)/2+S.curve*rx*(rnd()*0.5+0.75)*(t>=0?1:-1), cyp=(rootY+topY)/2;
-    stems.push({t,bx,rootY,topX,topY,cxp,cyp,topH});
+    const st={t,bx,rootY,topX,topY,cxp,cyp,topH};
+    const f0=S.base||0;                    // trim the bare lower stem: draw only from fraction f0 up
+    if(f0>0){const u=1-f0;
+      st.drawBx=u*u*bx+2*u*f0*cxp+f0*f0*topX; st.drawRootY=u*u*rootY+2*u*f0*cyp+f0*f0*topY;
+      st.drawCxp=u*cxp+f0*topX; st.drawCyp=u*cyp+f0*topY;}
+    stems.push(st);
   }
+  (S.extra||[]).forEach(e=>{           // hand-placed stems: {t, hm} at explicit position/height
+    const t=e.t, bx=cx+t*rx*S.spread, dome=Math.sqrt(Math.max(0,1-Math.min(1,t*t)));
+    const rootY=baseY-(B.show?ch*B.hm*0.3*dome:0);
+    const topH=ch*e.hm, topX=bx+t*S.lean*rx, topY=baseY-topH;
+    const cxp=(bx+topX)/2+S.curve*rx*0.85*(t>=0?1:-1), cyp=(rootY+topY)/2;
+    const st={t,bx,rootY,topX,topY,cxp,cyp,topH};
+    const f0=e.base!=null?e.base:(S.base||0);
+    if(f0>0){const u=1-f0;
+      st.drawBx=u*u*bx+2*u*f0*cxp+f0*f0*topX; st.drawRootY=u*u*rootY+2*u*f0*cyp+f0*f0*topY;
+      st.drawCxp=u*cxp+f0*topX; st.drawCyp=u*cyp+f0*topY;}
+    stems.push(st);
+  });
   return stems;
 }
 function pnLeaf(x,y,ang,len,shape,wr,col,ink){
@@ -1844,7 +1861,8 @@ function pnSpikePlume(x,y,up,F,rnd,outSide){
   if(F.arch==='out'&&outSide!==undefined) side=outSide;
   else if(F.arch==='in'&&outSide!==undefined) side=-outSide;
   else side=(rnd()>0.5?1:-1);
-  const spineX=f=>x+side*up*0.42*f*f, spineY=f=>y-up*f;
+  const archK=F.archK!=null?F.archK:0.42, curl=F.tipCurl||0;   // curl>0 nods the tip outward+over
+  const spineX=f=>x+side*up*archK*f*f, spineY=f=>y-up*f+curl*up*f*f;
   s+=pnStem(x,y,spineX(0.5),spineY(0.5),spineX(1),spineY(1),elevDarken(F.col,0.15),0.9);
   const nf=Math.max(24,Math.round(up*70));
   for(let i=0;i<nf;i++){const f=Math.pow(rnd(),0.7), hw=up*0.3*Math.pow(f,0.6)*(1.05-f*0.25);
@@ -1911,7 +1929,7 @@ function pnCustom(cx,baseY,rx,ch,c,rnd){
     } else { s+=pnFill(elevBush(cx,baseY,mRx,mH,rnd,bump),B.col,B.op,ink,0.9); }
   }
   const stems=pnBuildStems(cx,baseY,rx,ch,S,B,rnd);
-  stems.slice().sort((a,b)=>a.topY-b.topY).forEach(k=>{s+=pnStem(k.bx,k.rootY,k.cxp,k.cyp,k.topX,k.topY,S.col,S.w);});
+  stems.slice().sort((a,b)=>a.topY-b.topY).forEach(k=>{s+=pnStem(k.drawBx??k.bx,k.drawRootY??k.rootY,k.drawCxp??k.cxp,k.drawCyp??k.cyp,k.topX,k.topY,S.col,S.w);});
   s+=pnLeaves(cx,baseY,rx,ch,L,stems,rnd,B);
   s+=pnDrawFlowers(cx,baseY,rx,ch,F,stems,B,rnd);
   return s;
