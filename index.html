@@ -688,8 +688,8 @@ function elevScallop(pts,ctr,bump,rnd,closed){
 }
 // shrub / mounding perennial: a lobed dome sitting on the soil, with a rounded base
 // that bulges toward the viewer so it reads as a 3D mass, not a flat cutout
-function elevBush(cx,baseY,rx,topH,rnd,bump){
-  const n=Math.max(7,Math.min(15,Math.round(rx*3.2))), pts=[];
+function elevBush(cx,baseY,rx,topH,rnd,bump,lobeScale){
+  const ls=lobeScale||1, n=Math.round(Math.max(7,Math.min(15,Math.round(rx*3.2)))*ls), pts=[];
   for(let i=0;i<=n;i++){const t=i/n,a=Math.PI*(1-t);const w=1+(rnd()*2-1)*0.06;
     pts.push([cx+Math.cos(a)*rx*w, baseY-Math.sin(a)*topH*w]);}
   pts[0]=[cx-rx,baseY]; pts[n]=[cx+rx,baseY];      // pin the ground contacts
@@ -1427,7 +1427,7 @@ const ELEV_SHRUB={
  viburnum:{body:'upright',ac:'cone',col:'#eef0e6',sz:0.68,pos:'viburnum'},
  sweetpepperbush:{body:'spike',col:'#ded9c6'},
  winterberry:{body:'upright',ac:'berry',col:'#c1402f'},
- bayberry:{body:'loose'},
+ bayberry:{body:'loose',lobes:1.9},
  highbushblueberry:{body:'tight',ac:'berry',col:'#4a6b9e'},
  beachplum:{body:'columnar',ac:'mophead',col:'#eef0e6',sz:0.68,pos:'beachplum'},
  sweetfern:{body:'loose'},
@@ -1448,7 +1448,7 @@ function elevShrubMarkup(it,cx,gy,rx,ch,rnd){
     (ELEV_STEMS[it.pid]||[]).forEach(st=>{const B=[cx+st.b[0]*rx,gy-st.b[1]*ch],C=[cx+st.c[0]*rx,gy-st.c[1]*ch],T=[cx+st.t[0]*rx,gy-st.t[1]*ch];
       s+=`<path d="${elevTaperStem(B,C,T,rx*0.11,rx*0.02)}" fill="#8a6b4a" fill-opacity=".95" stroke="rgba(0,0,0,.28)" stroke-width=".8" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;});
     s+=elevShFol(elevBlob(cx,ccy,rx,cry,rnd),fc);}
-  else s+=elevShFol(elevBush(cx,gy,rx,bh,rnd,cfg.body==='tight'?0.3:0.5),fc);
+  else s+=elevShFol(elevBush(cx,gy,rx,bh,rnd,cfg.body==='tight'?0.3:0.5,cfg.lobes),fc);
   if(cfg.pos) s+=elevFlowersAtStr(ELEV_POS[cfg.pos],cx,gy,rx,bh,ar,cfg.ac,cfg.col,cfg.sz);
   else if(cfg.ac==='berry') s+=elevBerriesStr(cx,gy,rx,bh,ar,cfg.col,cfg.bsz,cfg.gap);
   else if(cfg.ac==='mophead') s+=elevMopStr(cx,gy,rx,bh,ar,cfg.col,cfg.sz);
