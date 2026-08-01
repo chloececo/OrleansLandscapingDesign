@@ -168,8 +168,11 @@ footer{color:var(--muted);font-size:12px;margin-top:22px;text-align:center}
 .chip{font-size:11.5px;border:1px solid var(--line2);border-radius:999px;padding:3px 9px;background:var(--paper2);color:var(--muted);white-space:nowrap}
 .chip.good{border-color:#bcd3b0;background:#eef4e7;color:#456e36}
 .chip.warn{border-color:#e4cda9;background:#f7efe0;color:#8a6526}
-.wiki{display:inline-block;margin:0 0 13px;font-size:13px;color:#3f6b53;text-decoration:none;border-bottom:1px solid #bcd3b0}
+.reflinks{margin:0 0 13px}
+.wiki{display:inline-block;margin:0 14px 4px 0;font-size:13px;color:#3f6b53;text-decoration:none;border-bottom:1px solid #bcd3b0}
 .wiki:hover{color:#27543a}
+.pt{display:inline-block;margin:0 0 4px;font-size:13px;color:#3f6b53;text-decoration:none;border-bottom:1px solid #bcd3b0}
+.pt:hover{color:#27543a}
 .swaplab{font-size:12px;color:var(--muted);display:block;margin-bottom:4px;font-weight:500}
 /* ---- Elevation view ---- */
 .elevwrap{position:relative;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
@@ -2291,6 +2294,20 @@ function plantChips(pl){
     chip('\u{1F98C}','Deer: '+pl.deer,deerTone[pl.deer]||'')
   ].join('');
 }
+// Deep-link to a plant's PictureThis (picturethisai.com) wiki page, built from its
+// botanical name. "Genus spp." and "Genus x hybrid" names fall back to the genus page
+// (verified to resolve); PT_WIKI holds the few species PictureThis files under a
+// different accepted name than our catalog uses.
+const PT_WIKI={'Pennisetum alopecuroides':'Cenchrus_alopecuroides'};
+function ptUrl(pl){
+  let slug=PT_WIKI[pl.sci];
+  if(!slug){
+    let s=pl.sci.replace(/\s+spp\.$/,'');
+    if(/\sx\s/.test(s))s=s.split(' ')[0];
+    slug=s.replace(/\s+/g,'_');
+  }
+  return 'https://www.picturethisai.com/wiki/'+slug+'.html';
+}
 function renderSelCtrl(){const box=document.getElementById('selctrl');if(!box)return;
   if(sel.plant==null||!state.layouts[sel.bed][sel.plant]){box.innerHTML='';return;}
   const it=state.layouts[sel.bed][sel.plant];const pl=PLANTS[it.pid];
@@ -2298,7 +2315,10 @@ function renderSelCtrl(){const box=document.getElementById('selctrl');if(!box)re
       <div class="pcard-h"><span class="sw" style="background:${pl.color}"></span>
         <div><div class="pc-name">${pl.name}</div><div class="pc-sci">${pl.sci}</div></div></div>
       <div class="chips">${plantChips(pl)}</div>
-      <a class="wiki" href="https://en.wikipedia.org/wiki/${pl.wiki}" target="_blank" rel="noopener">Learn more on Wikipedia \u2197</a>
+      <div class="reflinks">
+        <a class="wiki" href="https://en.wikipedia.org/wiki/${pl.wiki}" target="_blank" rel="noopener">Learn more on Wikipedia \u2197</a>
+        <a class="pt" href="${ptUrl(pl)}" target="_blank" rel="noopener">Care info on PictureThis \u2197</a>
+      </div>
       <label class="swaplab" for="swapsel">Swap this plant for another</label>
       <select id="swapsel"></select>
     </div>`;
