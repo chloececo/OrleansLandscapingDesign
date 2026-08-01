@@ -233,7 +233,7 @@ const EXISTING={
 // Mature height in feet — drives back-to-front tiering in the plan and the
 // new elevation view. Plants not listed fall back to a per-category default.
 const HT={
-  boxwood:3, arborvitae:12, holly:15, hydrangea:4, rhododendron:5, spirea:3, viburnum:8,
+  boxwood:3, arborvitae:11, holly:13, hydrangea:4, rhododendron:5, spirea:3, viburnum:7,
   lavender:2, salvia:1.5, catnip:1.5, coneflower:3, daylily:2, rudbeckia:2.5, hosta:2,
   heuchera:1.2, astilbe:2, sedum:1.5, fountaingrass:3, reedgrass:4, liriope:1, fern:2.5,
   thymeground:0.3, vinca:0.5, rosemary:3, thyme:1, sage:2, basil:1.5, parsley:1, oregano:1.5,
@@ -241,13 +241,13 @@ const HT={
   wildlupine:2, seasidegoldenrod:5, anisegoldenrod:3, blazingstar:3, beardtongue:3,
   mountainmint:3, baptisia:3.5, goldenalexanders:2.5, oxeyesunflower:4, blueflagiris:2.5,
   wildcolumbine:2, wildgeranium:1.5, foamflower:0.8, woodlandphlox:1.2, cardinalflower:3.5,
-  whitewoodaster:2, goldengroundsel:2, sweetpepperbush:6, winterberry:8, inkberry:6,
-  bayberry:8, highbushblueberry:7, beachplum:8, sweetfern:3, chokeberry:6, shadbush:18,
+  whitewoodaster:2, goldengroundsel:2, sweetpepperbush:6, winterberry:7, inkberry:6,
+  bayberry:7, highbushblueberry:7, beachplum:7, sweetfern:3, chokeberry:6, shadbush:11,
   newjerseytea:3, oakleafhydrangea:7, littlebluestem:3, switchgrass:5, pennsylvaniasedge:0.8,
   prairiedropseed:2.5, purplelovegrass:2, cinnamonfern:4, christmasfern:2, ostrichfern:5,
   bearberry:0.4, wildstrawberry:0.4, bluetviolet:0.5, teaberry:0.5, trumpethoneysuckle:12,
-  virginiacreeper:12, oak:60, butterflybush:8,
-  lilac:10, orangedaylily:3.5, peony:3
+  virginiacreeper:12, oak:60, butterflybush:7,
+  lilac:9, orangedaylily:3.5, peony:3
 };
 const HTCAT={Tree:30,Shrub:5,Grass:3,Fern:3,Perennial:2.5,Herb:1.5,Groundcover:0.5,Vine:10};
 function plantHt(pid){const p=PLANTS[pid];if(!p)return 2;if(HT[pid]!=null)return HT[pid];return HTCAT[p.cat]||2;}
