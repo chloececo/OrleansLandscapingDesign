@@ -2009,6 +2009,27 @@ function drawElevation(svg,bed,lay,view,topH){
   const gmin=Math.min(...gv), gmax=Math.max(...gv), gspan=gmax-gmin;
   const groundDN=v=> gspan>0?(v-gmin)/gspan:0.5;
   const projGround=(xf,yf)=>{const dN=groundDN(depthRaw(xf,yf)); return [hcOf(xf,yf)+dN*SKEW, groundF-dN*RISE];};
+  // Inverse of the plant projection: given a base point (foot-of-plant) in the elevation's
+  // own SVG coords, recover the bed-plan (x,y) in feet. Undo the up/right shear to read the
+  // depth (dN) and horizontal spread, then map spread→one axis and depth→the other. A
+  // returned null means "leave that coordinate unchanged" (bed has no depth, or a viewpoint
+  // gaze that's singular for this axis). Mirrors depthRaw / hcOf / groundDN above.
+  const elevInvert=(px,py)=>{
+    let dN=RISE>1e-6?(groundF-py)/RISE:0.5; dN=Math.max(0,Math.min(1,dN));
+    let hc=px-dN*SKEW; hc=Math.max(0,Math.min(hspan,hc));
+    const spread=view.flip?hspan-hc:hc;
+    const haveDepth=gspan>1e-6, D=gmin+dN*gspan;
+    let xf=null,yf=null;
+    if(vp){
+      const K=(b.x0-vp[0])*gx+(b.y0-vp[1])*gy;
+      if(axis==='front'){xf=spread; if(haveDepth&&Math.abs(gy)>1e-6) yf=(D-K-PPF*gx*xf)/(PPF*gy);}
+      else{yf=spread; if(haveDepth&&Math.abs(gx)>1e-6) xf=(D-K-PPF*gy*yf)/(PPF*gx);}
+    }else{
+      if(axis==='front'){xf=spread; if(haveDepth) yf=D;}
+      else{yf=spread; if(haveDepth) xf=D;}
+    }
+    return [xf,yf];
+  };
   polys.forEach(poly=>{
     const d=poly.map((p,i)=>`${i?'L':'M'} ${projGround(p[0],p[1]).map(n=>n.toFixed(2)).join(' ')}`).join(' ')+' Z';
     const soil=document.createElementNS(SVGNS,'path');
@@ -2080,14 +2101,22 @@ function drawElevation(svg,bed,lay,view,topH){
         }
       }
       g.setAttribute('opacity',(1-dN*0.18).toFixed(2));        // haze the distance
-      g.style.cursor='pointer';
       g.addEventListener('pointerenter',()=>showElevTip(it));
       g.addEventListener('pointermove',moveElevTip);
       g.addEventListener('pointerleave',hideElevTip);
-      // Click a plant in the elevation to select it — same detail card as the bed view.
-      g.addEventListener('click',()=>{const idx=state.layouts[sel.bed].indexOf(it);if(idx<0)return;
-        sel.plant=idx;sel.editing=null;hideElevTip();syncViews();
-        const box=document.getElementById('selctrl');if(box)box.scrollIntoView({behavior:'smooth',block:'nearest'});});
+      const idx=state.layouts[sel.bed].indexOf(it);
+      // Suggested plants (and existing ones unlocked via “Edit”) can be dragged to
+      // reposition them right here in the elevation; locked existing plants only select.
+      if(idx>=0 && (!it.exist || sel.editing===idx)){
+        g.style.cursor='grab';
+        g.addEventListener('pointerdown',ev=>elevStartDrag(ev,g,it,baseX,baseY,elevInvert));
+      }else{
+        g.style.cursor='pointer';
+        // Click a plant in the elevation to select it — same detail card as the bed view.
+        g.addEventListener('click',()=>{const j=state.layouts[sel.bed].indexOf(it);if(j<0)return;
+          sel.plant=j;sel.editing=null;hideElevTip();syncViews();
+          const box=document.getElementById('selctrl');if(box)box.scrollIntoView({behavior:'smooth',block:'nearest'});});
+      }
       svg.appendChild(g);
     });
   // Tight-fit the viewBox to the projected ground + plants so the scene fills the
@@ -2175,6 +2204,50 @@ function endDrag(e){if(!drag)return;const g=drag.g;g.removeEventListener('pointe
   const bed=bedById(sel.bed);const polys=polysFt(bed);const it=state.layouts[sel.bed][drag.i];
   if(!inAny(it.x,it.y,polys)){const np=nearestPt(it.x,it.y,interiorPts(bed));it.x=np[0];it.y=np[1];g.setAttribute('transform',`translate(${it.x},${it.y})`);}
   drag=null;save();renderElev();}
+// ---- Elevation drag: reposition a plant by dragging its silhouette in the side view ----
+// The elevation is an oblique projection of the plan, so we move the token live in pure
+// screen space (a translate) and only on release invert the projection back to bed (x,y).
+let elevDrag=null;
+function elevStartDrag(e,g,it,baseX,baseY,invert){
+  e.preventDefault();
+  const svg=g.ownerSVGElement; const idx=state.layouts[sel.bed].indexOf(it); if(idx<0)return;
+  sel.plant=idx; if(!it.exist)sel.editing=null;               // mirror the bed-view drag
+  const[px,py]=svgPt(svg,e);
+  elevDrag={it,g,svg,base:[baseX,baseY],start:[px,py],invert,moved:false};
+  g.style.cursor='grabbing'; hideElevTip();
+  g.setPointerCapture(e.pointerId);
+  g.addEventListener('pointermove',elevOnDrag);
+  g.addEventListener('pointerup',elevEndDrag);
+  g.addEventListener('pointercancel',elevEndDrag);
+  renderList();renderSchem();markSel();   // reflect the selection in the other views WITHOUT re-rendering (and destroying) the elevation mid-drag
+}
+function elevOnDrag(e){
+  if(!elevDrag)return;
+  const[px,py]=svgPt(elevDrag.svg,e);
+  const dx=px-elevDrag.start[0], dy=py-elevDrag.start[1];
+  if(!elevDrag.moved && Math.hypot(dx,dy)>0.05) elevDrag.moved=true;
+  elevDrag.g.setAttribute('transform',`translate(${dx.toFixed(3)},${dy.toFixed(3)})`);
+}
+function elevEndDrag(e){
+  if(!elevDrag)return;
+  const{g,svg,it,base,start,invert,moved}=elevDrag;
+  g.removeEventListener('pointermove',elevOnDrag);
+  g.removeEventListener('pointerup',elevEndDrag);
+  g.removeEventListener('pointercancel',elevEndDrag);
+  g.style.cursor='grab';
+  if(moved){
+    const[px,py]=svgPt(svg,e);
+    let[nx,ny]=invert(base[0]+(px-start[0]), base[1]+(py-start[1]));
+    if(nx==null)nx=it.x; if(ny==null)ny=it.y;
+    const bed=bedById(sel.bed), polys=polysFt(bed);
+    if(!inAny(nx,ny,polys)){const np=nearestPt(nx,ny,interiorPts(bed));nx=np[0];ny=np[1];}  // keep it inside its bed/polygon (multi-bed: snaps to nearest sub-polygon)
+    it.x=nx; it.y=ny; save();
+    elevDrag=null; syncViews();
+  }else{                                                       // no real movement → treat as a select
+    elevDrag=null; syncViews();
+    const box=document.getElementById('selctrl'); if(box)box.scrollIntoView({behavior:'smooth',block:'nearest'});
+  }
+}
 function markSel(){document.querySelectorAll('#schem .tok').forEach(g=>{const on=+g.dataset.i===sel.plant;g.classList.toggle('sel',on);if(on&&g.parentNode)g.parentNode.appendChild(g);});}   // raise the selected token so its ✕ sits above neighbours
 function syncViews(){renderSchem();renderElev();renderList();markSel();}
 
