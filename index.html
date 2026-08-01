@@ -143,7 +143,7 @@ svg.schem{display:block;width:100%;height:auto;touch-action:none}
   padding:2px 4px;border-radius:6px;flex:none;line-height:1}
 .prow .rm:hover{color:#a23;background:#f7e9e9}
 #selctrl{flex:none}
-.ctrls{flex:none;display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--line);padding-top:14px}
+.ctrls{flex:none;display:flex;flex-direction:column;gap:10px;border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:14px}
 .ctrls label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px;font-weight:500}
 select,.btn{font-family:Inter;font-size:14px;color:var(--ink)}
 select{width:100%;padding:9px 10px;border:1px solid var(--line2);border-radius:9px;background:var(--card);cursor:pointer}
@@ -159,6 +159,10 @@ footer{color:var(--muted);font-size:12px;margin-top:22px;text-align:center}
 .prow .nm{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.15}
 .prow .nm .cn{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .prow .nm .sn{font-style:italic;font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prow .qty{flex:none;font-weight:700;font-size:13px;color:var(--ink);font-variant-numeric:tabular-nums}
+.prow.exist .qty{color:var(--muted)}
+.prow.sub{margin-left:19px;border-left:2px solid var(--line2);border-radius:0 9px 9px 0;padding-left:9px}
+.prow.sub .nm .sn{font-style:normal}
 .pcard{border-bottom:1px solid var(--line);padding-bottom:13px;margin-bottom:14px}
 .pcard-h{display:flex;align-items:center;gap:10px;margin-bottom:9px}
 .pcard-h .sw{width:16px;height:16px;border-radius:5px;flex:none;box-shadow:inset 0 0 0 1px rgba(0,0,0,.15)}
@@ -546,10 +550,10 @@ function renderDetail(){
       </div>
       <div class="side">
         <div id="selctrl"></div>
-        <h3>Plants in this bed</h3>
-        <ul class="plist" id="plist"></ul>
         <div class="ctrls"><div><label for="addsel">Add a plant</label>
           <div class="row2"><div><select id="addsel"></select></div><button class="btn" id="addbtn">Add</button></div></div></div>
+        <h3>Plants in this bed</h3>
+        <ul class="plist" id="plist"></ul>
       </div>
     </div>`;
   det.appendChild(panel);
@@ -2263,26 +2267,68 @@ function elevEndDrag(e){
 function markSel(){document.querySelectorAll('#schem .tok').forEach(g=>{const on=+g.dataset.i===sel.plant;g.classList.toggle('sel',on);if(on&&g.parentNode)g.parentNode.appendChild(g);});}   // raise the selected token so its ✕ sits above neighbours
 function syncViews(){renderSchem();renderElev();renderList();markSel();}
 
+// Which species groups are expanded to show their individual plants. Keyed by pid+status.
+const expandedGroups=new Set();
+function gkey(pid,exist){return pid+'|'+(exist?'e':'n');}
+function toggleGroup(key){if(expandedGroups.has(key))expandedGroups.delete(key);else expandedGroups.add(key);renderList();}
+// Build one individual-plant <li> (used for single-species rows and for the expanded
+// sub-rows of a multi-plant group). `pos` is the 1-based position within a drift, shown
+// on sub-rows so a specimen picked on the map/elevation can be told apart from its siblings.
+function plantRowLi(i,sub,pos){
+  const bed=bedById(sel.bed);const it=state.layouts[bed.id][i];const pl=PLANTS[it.pid];
+  const isExist=!!it.exist, editing=isExist&&sel.editing===i;
+  const li=document.createElement('li');
+  li.className='prow'+(isExist?' exist':'')+(i===sel.plant?' sel':'')+(editing?' editing':'')+(sub?' sub':'');
+  const sw=isExist?`<span class="sw"></span>`:`<span class="sw" style="background:${pl.color}"></span>`;
+  let ctrl;
+  if(isExist){ctrl=`<button class="ed" title="${editing?'Lock (finish editing)':'Edit this existing plant'}">${editing?'✓ Done':'✎ Edit'}</button>`+(editing?`<button class="rm" title="Remove">✕</button>`:'');}
+  else{ctrl=`<button class="rm" title="Remove">✕</button>`;}
+  if(sub){
+    const note=isExist?(editing?'editing':'existing'):('#'+pos);
+    li.innerHTML=`${sw}<span class="nm"><span class="cn">${pl.name}</span><span class="sn">${note}</span></span>${ctrl}`;
+  }else{
+    const sn=pl.sci+(isExist?(editing?' · editing':' · existing'):'');
+    const sz=sizeTier(it.pid);
+    li.innerHTML=`${sw}<span class="nm"><span class="cn">${pl.name}</span><span class="sn">${sn}</span></span><span class="szpill ${sz.t}" title="Mature height: ~${plantHt(it.pid)} ft">${sz.l}</span><span class="meta">${pl.cat}</span>${ctrl}`;
+  }
+  // Existing plants only move/edit via the Edit button — clicking the row does nothing.
+  li.onclick=ev=>{if(isExist||ev.target.closest('.rm'))return;sel.plant=i;sel.editing=null;syncViews();};
+  const ed=li.querySelector('.ed');if(ed)ed.onclick=ev=>{ev.stopPropagation();if(sel.editing===i){sel.editing=null;sel.plant=null;}else{sel.editing=i;sel.plant=i;}syncViews();};
+  const rm=li.querySelector('.rm');if(rm)rm.onclick=ev=>{ev.stopPropagation();deletePlant(i);};
+  return li;
+}
 function renderList(){
   const bed=bedById(sel.bed);const ul=document.getElementById('plist');ul.innerHTML='';
-  state.layouts[bed.id].forEach((it,i)=>{const pl=PLANTS[it.pid];if(!pl)return;
-    const isExist=!!it.exist, editing=isExist&&sel.editing===i;
-    const li=document.createElement('li');
-    li.className='prow'+(isExist?' exist':'')+(i===sel.plant?' sel':'')+(editing?' editing':'');
+  // Collapse the layout into one row per species (existing vs. new kept separate), with a
+  // count. Counts come from the live placements, so they track adds/deletes/swaps/drags.
+  const groups=[];const gmap={};
+  state.layouts[bed.id].forEach((it,i)=>{if(!PLANTS[it.pid])return;const k=gkey(it.pid,it.exist);
+    let g=gmap[k];if(!g){g=gmap[k]={pid:it.pid,exist:!!it.exist,key:k,idx:[]};groups.push(g);}g.idx.push(i);});
+  groups.forEach(g=>{
+    if(g.idx.length===1){ul.appendChild(plantRowLi(g.idx[0],false));return;}
+    const pl=PLANTS[g.pid];const n=g.idx.length;const isExist=g.exist;
+    const expanded=expandedGroups.has(g.key);
+    const selInGroup=g.idx.includes(sel.plant)||g.idx.includes(sel.editing);
+    const hdr=document.createElement('li');
+    hdr.className='prow grouphdr'+(isExist?' exist':'')+((!expanded&&selInGroup)?' sel':'');
     const sw=isExist?`<span class="sw"></span>`:`<span class="sw" style="background:${pl.color}"></span>`;
-    const sub=pl.sci+(isExist?(editing?' · editing':' · existing'):'');
-    let ctrl;
-    if(isExist){ctrl=`<button class="ed" title="${editing?'Lock (finish editing)':'Edit this existing plant'}">${editing?'✓ Done':'✎ Edit'}</button>`+(editing?`<button class="rm" title="Remove">✕</button>`:'');}
-    else{ctrl=`<button class="rm" title="Remove">✕</button>`;}
-    const sz=sizeTier(it.pid);
-    li.innerHTML=`${sw}<span class="nm"><span class="cn">${pl.name}</span><span class="sn">${sub}</span></span><span class="szpill ${sz.t}" title="Mature height: ~${plantHt(it.pid)} ft">${sz.l}</span><span class="meta">${pl.cat}</span>${ctrl}`;
-    // Existing plants only move/edit via the Edit button — clicking the row does nothing.
-    li.onclick=ev=>{if(isExist||ev.target.closest('.rm'))return;sel.plant=i;sel.editing=null;syncViews();};
-    const ed=li.querySelector('.ed');if(ed)ed.onclick=ev=>{ev.stopPropagation();if(sel.editing===i){sel.editing=null;sel.plant=null;}else{sel.editing=i;sel.plant=i;}syncViews();};
-    const rm=li.querySelector('.rm');if(rm)rm.onclick=ev=>{ev.stopPropagation();deletePlant(i);};
-    ul.appendChild(li);});
+    const sn=pl.sci+(isExist?' · existing':'');
+    const sz=sizeTier(g.pid);
+    hdr.innerHTML=`${sw}<span class="qty">${n}×</span><span class="nm"><span class="cn">${pl.name}</span><span class="sn">${sn}</span></span><span class="szpill ${sz.t}" title="Mature height: ~${plantHt(g.pid)} ft">${sz.l}</span><span class="meta">${pl.cat}</span><button class="rm" title="Remove all ${n} ${pl.name}">✕</button>`;
+    hdr.onclick=ev=>{if(ev.target.closest('.rm'))return;toggleGroup(g.key);};
+    hdr.querySelector('.rm').onclick=ev=>{ev.stopPropagation();deleteGroup(g.idx);};
+    ul.appendChild(hdr);
+    if(expanded)g.idx.forEach((i,k)=>ul.appendChild(plantRowLi(i,true,k+1)));
+  });
   renderSelCtrl();
 }
+// Remove every plant in a species group at once (splice high→low so earlier indices stay valid).
+function deleteGroup(indices){const bed=bedById(sel.bed);
+  [...indices].sort((a,b)=>b-a).forEach(i=>{const it=state.layouts[bed.id][i];
+    if(it&&it.exist&&!state.deletedExisting.includes(it.eid))state.deletedExisting.push(it.eid);
+    state.layouts[bed.id].splice(i,1);
+    ['plant','editing'].forEach(k=>{if(sel[k]===i)sel[k]=null;else if(sel[k]!=null&&sel[k]>i)sel[k]--;});});
+  save();syncViews();}
 // Bucket a plant's mature height into Tall / Medium / Short for a quick-read pill.
 function sizeTier(pid){const h=plantHt(pid);return h>=6?{l:'Tall',t:'tall'}:h>=2?{l:'Medium',t:'med'}:{l:'Short',t:'short'};}
 function deletePlant(i){const bed=bedById(sel.bed);const it=state.layouts[bed.id][i];
