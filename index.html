@@ -108,6 +108,14 @@ svg.schem{display:block;width:100%;height:auto;touch-action:none}
 .tok.exist text{fill:#5c6a48}
 .tok.exist.locked{opacity:.8;cursor:pointer}        /* locked: tap to edit */
 .tok.exist.sel circle.ring{stroke:var(--ink);stroke-dasharray:2 2}  /* selected while editing */
+/* Delete ✕ on a plant token — hidden until the token is hovered or selected, so a
+   click on it removes the plant (mirrors the viewpoint ✕: stops the drag, deletes) */
+.tok .del{opacity:0;pointer-events:none;cursor:pointer;transition:opacity .12s}
+.tok:hover .del,.tok.sel .del{opacity:.5;pointer-events:auto}
+.tok .del:hover{opacity:.9}   /* firm up when the ✕ itself is hovered */
+.tok .del .delbg{fill:#7a828c;stroke:#fff;stroke-width:1.5}
+.tok .del:hover .delbg{fill:#5c636b}
+.tok .del .delx{stroke:#fff;stroke-width:1.5;stroke-linecap:round}
 .prow.exist .sw{background:#b6b6b6 !important}
 .prow.exist .cn{color:var(--muted)}
 .prow.editing{background:var(--paper2);border-color:var(--line2)}
@@ -571,7 +579,27 @@ function renderSchem(){
     const t=document.createElementNS(SVGNS,'text');t.setAttribute('font-size',Math.min(fs,r*0.95));t.textContent=abbr(pl.name);
     if(it.exist){const ttl=document.createElementNS(SVGNS,'title');ttl.textContent=pl.name+(editable?' (editing)':' (existing — press “Edit” to move)');g.appendChild(ttl);}
     g.appendChild(ring);g.appendChild(c);g.appendChild(t);
-    if(editable)g.addEventListener('pointerdown',startDrag);   // locked existing plants are non-interactive
+    if(editable){
+      g.addEventListener('pointerdown',startDrag);   // locked existing plants are non-interactive
+      // SVG has no z-index — raise this token to the top of the draw order on hover so
+      // its ✕ (which spills past the circle) is never hidden under a neighbouring circle.
+      g.addEventListener('pointerenter',()=>svg.appendChild(g));
+      // ✕ affordance at the circle's top-right corner. Same intent as the list's ✕
+      // (and the viewpoint ✕): swallow the pointerdown so it deletes instead of dragging.
+      const br=0.49, k=br*0.46;   // fixed badge size — same for every plant, regardless of circle size (matches bearberry's)
+      // Place the badge on the circle's top-right shoulder, its centre pushed OUT past
+      // the body so the plant centre is never inside the (clickable) ✕ — otherwise on a
+      // small circle the fixed-size badge would cover the body and a click meant to
+      // select the plant would land on its ✕ and delete it instead.
+      const off=(r+br*0.55)*0.7071;
+      const dg=document.createElementNS(SVGNS,'g');dg.setAttribute('class','del');
+      dg.setAttribute('transform',`translate(${off},${-off})`);
+      const dttl=document.createElementNS(SVGNS,'title');dttl.textContent='Remove '+pl.name;dg.appendChild(dttl);
+      const bg=document.createElementNS(SVGNS,'circle');bg.setAttribute('class','delbg');bg.setAttribute('r',br);bg.setAttribute('vector-effect','non-scaling-stroke');dg.appendChild(bg);
+      [[-k,-k,k,k],[-k,k,k,-k]].forEach(s=>{const l=document.createElementNS(SVGNS,'line');l.setAttribute('x1',s[0]);l.setAttribute('y1',s[1]);l.setAttribute('x2',s[2]);l.setAttribute('y2',s[3]);l.setAttribute('class','delx');l.setAttribute('vector-effect','non-scaling-stroke');dg.appendChild(l);});
+      const di=i;dg.addEventListener('pointerdown',ev=>{ev.stopPropagation();ev.preventDefault();deletePlant(di);});
+      g.appendChild(dg);
+    }
     svg.appendChild(g);});
   // Tight-fit the viewBox to what's actually drawn (bed outline + plant canopies,
   // including any overhang past the edge) so the bed fills the card with only a
@@ -2147,7 +2175,7 @@ function endDrag(e){if(!drag)return;const g=drag.g;g.removeEventListener('pointe
   const bed=bedById(sel.bed);const polys=polysFt(bed);const it=state.layouts[sel.bed][drag.i];
   if(!inAny(it.x,it.y,polys)){const np=nearestPt(it.x,it.y,interiorPts(bed));it.x=np[0];it.y=np[1];g.setAttribute('transform',`translate(${it.x},${it.y})`);}
   drag=null;save();renderElev();}
-function markSel(){document.querySelectorAll('#schem .tok').forEach(g=>g.classList.toggle('sel',+g.dataset.i===sel.plant));}
+function markSel(){document.querySelectorAll('#schem .tok').forEach(g=>{const on=+g.dataset.i===sel.plant;g.classList.toggle('sel',on);if(on&&g.parentNode)g.parentNode.appendChild(g);});}   // raise the selected token so its ✕ sits above neighbours
 function syncViews(){renderSchem();renderElev();renderList();markSel();}
 
 function renderList(){
