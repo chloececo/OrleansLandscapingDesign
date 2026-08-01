@@ -2201,6 +2201,7 @@ function showElevTip(it){const t=document.getElementById('eltip');const pl=PLANT
 function moveElevTip(e){const t=document.getElementById('eltip');if(!t)return;const r=t.parentElement.getBoundingClientRect();
   let x=e.clientX-r.left+14, y=e.clientY-r.top+14;
   if(x+t.offsetWidth>r.width-4) x=e.clientX-r.left-t.offsetWidth-12;
+  if(y+t.offsetHeight>r.height-4) y=e.clientY-r.top-t.offsetHeight-12;   // flip above the cursor when it would spill off the bottom
   t.style.left=Math.max(2,x)+'px'; t.style.top=Math.max(2,y)+'px';}
 function hideElevTip(){const t=document.getElementById('eltip');if(t)t.classList.remove('on');}
 // ---- Plant-list summary with quantities and spacing ----
