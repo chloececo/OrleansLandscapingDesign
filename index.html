@@ -127,7 +127,7 @@ svg.schem{display:block;width:100%;height:auto;touch-action:none}
 .side h3{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 10px;font-weight:600}
 /* The list fills the column but never grows it past the stage (bed plan +
    elevation) height — it scrolls internally instead. When a plant is clicked the
-   detail card below it claims its space and the list shrinks to make room. */
+   detail card above it claims its space and the list shrinks to make room. */
 .plist{list-style:none;margin:0 0 14px;padding:0;display:flex;flex-direction:column;gap:6px;flex:1 1 0;min-height:0;overflow:auto}
 .prow{display:flex;align-items:center;gap:9px;padding:6px 7px;border-radius:9px;border:1px solid transparent;cursor:pointer}
 .prow:hover{background:var(--paper2)}
@@ -159,7 +159,7 @@ footer{color:var(--muted);font-size:12px;margin-top:22px;text-align:center}
 .prow .nm{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.15}
 .prow .nm .cn{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .prow .nm .sn{font-style:italic;font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.pcard{border-top:1px solid var(--line);padding-top:13px;margin-bottom:6px}
+.pcard{border-bottom:1px solid var(--line);padding-bottom:13px;margin-bottom:14px}
 .pcard-h{display:flex;align-items:center;gap:10px;margin-bottom:9px}
 .pcard-h .sw{width:16px;height:16px;border-radius:5px;flex:none;box-shadow:inset 0 0 0 1px rgba(0,0,0,.15)}
 .pc-name{font-weight:600;font-size:16px;line-height:1.1}
@@ -545,9 +545,9 @@ function renderDetail(){
         </div>
       </div>
       <div class="side">
+        <div id="selctrl"></div>
         <h3>Plants in this bed</h3>
         <ul class="plist" id="plist"></ul>
-        <div id="selctrl"></div>
         <div class="ctrls"><div><label for="addsel">Add a plant</label>
           <div class="row2"><div><select id="addsel"></select></div><button class="btn" id="addbtn">Add</button></div></div></div>
       </div>
