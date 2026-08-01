@@ -752,7 +752,9 @@ const ELEV_GRASS={
  fountaingrass:{fc:'#c9a96a',hm:0.75,spread:0.75,dip:0.25,dens:4.5,sw:1.8,arch:1.1,droop:0.05,dk:0.4,tuft:0.7,rs:11,seed:{style:'feather',col:'#e4d6ae',sz:1.7,n:7,dd:1.3}},
  liriope:{fc:'#5e7a4e',hm:1.05,spread:0.6,dip:0.2,dens:9.5,sw:2.3,arch:0.95,droop:0.1,dk:0.35,tuft:0.6,rs:2,seed:{style:'spike',col:'#8d7fc4',sz:1.15,n:4}},
  littlebluestem:{fc:'#9a7b5f',hm:1.05,spread:0.2,dip:0.25,dens:9.5,sw:1.6,arch:1.05,droop:0.05,dk:0.4,tuft:0.7,rs:2,seed:{style:'tufts',col:'#efe9dc',sz:1.35,n:12}},
- pennsylvaniasedge:{fc:'#7fa05a',hm:0.85,spread:0.6,dip:0.25,dens:14,sw:1.4,arch:1.25,droop:0.55,dk:0.3,tuft:0.65,rs:2},
+ pennsylvaniasedge:{fc:'#7fa05a',hm:0.85,spread:0.68,dip:0.25,dens:16,sw:1.9,arch:1.25,droop:0.55,dk:0.3,tuft:0.78,rs:2,
+   tufts:[{dx:-0.50,dy:0.05,r:0.50,h:0.80},{dx:0.52,dy:0.09,r:0.46,h:0.72},{dx:-0.02,dy:-0.03,r:0.52,h:1.02}]}, // colony sedge: one token = three offset tufts
+
  reedgrass:{fc:'#c8b277',hm:0.95,spread:0.6,dip:0.15,dens:6,sw:1.6,arch:0.55,droop:0,dk:0.3,tuft:0.45,rs:1,seed:{style:'feather',col:'#ddca8e',sz:1.6,n:6}},
  switchgrass:{fc:'#b7a06a',hm:1.05,spread:0.5,dip:0.2,dens:5,sw:1.7,arch:1.05,droop:0.1,dk:0.3,tuft:0.5,seed:{style:'panicle',col:'#cdb87e',sz:1.3,n:12,dd:3}},
  prairiedropseed:{fc:'#a8b06a',hm:0.9,spread:0.4,dip:0.2,dens:13,sw:1.4,arch:1.2,droop:0.5,dk:0.3,tuft:0.5,seed:{style:'panicle',col:'#bcb27a',sz:0.7,n:11}},
@@ -761,9 +763,19 @@ const ELEV_GRASS={
 function elevQuadAt(B,C,T,u){const v=1-u;return [v*v*B[0]+2*v*u*C[0]+u*u*T[0], v*v*B[1]+2*v*u*C[1]+u*u*T[1]];}
 function elevGrassMarkup(it,cx,by,rx,ch){
   const cfg=ELEV_GRASS[it.pid]; if(!cfg) return '';
+  const base=it.pid+(cfg.rs?('#'+cfg.rs):'');
+  if(cfg.tufts){                                        // colony grass → draw the token as a small cluster
+    return cfg.tufts.map((t,i)=>({t,i}))
+      .sort((a,b)=>a.t.dy-b.t.dy)                        // back tufts (smaller dy) first, so front ones overlap
+      .map(({t,i})=>elevGrassOneTuft(cfg,base+'/'+i,cx+t.dx*rx,by+t.dy*ch,rx*t.r,ch*t.h))
+      .join('');
+  }
+  return elevGrassOneTuft(cfg,base,cx,by,rx,ch,it);
+}
+function elevGrassOneTuft(cfg,seed,cx,by,rx,ch,it){
   const q=n=>n.toFixed(2);
   const topH=ch*cfg.hm, s=rx*cfg.spread, dip=rx*cfg.dip, top=rx*0.32;
-  const rnd=elevRngStr(it.pid+(cfg.rs?('#'+cfg.rs):''));
+  const rnd=elevRngStr(seed);
   let out=`<path d="M ${q(cx-s)} ${q(by)} Q ${q(cx)} ${q(by+dip*2)} ${q(cx+s)} ${q(by)} Q ${q(cx)} ${q(by-top)} ${q(cx-s)} ${q(by)} Z" fill="${cfg.fc}" fill-opacity="${cfg.tuft}"/>`;
   const n=Math.max(8,Math.round(rx*2*cfg.dens));        // dens = blades per ft of clump width
   const blades=[]; let d='';
@@ -777,7 +789,7 @@ function elevGrassMarkup(it,cx,by,rx,ch){
     blades.push({B:[bx,baseY],C:[cpX,cpY],T:[tipX,tipY],h});
   }
   out+=`<path d="${d}" fill="none" stroke="${elevDarken(cfg.fc,cfg.dk)}" stroke-width="${cfg.sw}" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`;
-  if(cfg.seed) out+=elevGrassSeedsStr(cfg,cx,by,rx,topH,s,dip,blades,elevRngStr(it.pid+'/seed'+(cfg.rs?('#'+cfg.rs):'')));
+  if(cfg.seed && it) out+=elevGrassSeedsStr(cfg,cx,by,rx,topH,s,dip,blades,elevRngStr(it.pid+'/seed'+(cfg.rs?('#'+cfg.rs):'')));
   return out;
 }
 function elevGrassSeedsStr(cfg,cx,by,rx,topH,s,dip,blades,r){
