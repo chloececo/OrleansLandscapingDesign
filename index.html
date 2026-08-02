@@ -1450,7 +1450,8 @@ const ELEV_SHRUB={
  chokeberry:{body:'upright',ac:'berry',col:'#39264a',bsz:1.584},
  shadbush:{body:'multistem',ac:'mophead',col:'#eef0e6',sz:1.1,pos:'shadbush',trunk:0.3},
  newjerseytea:{body:'loose',ac:'mophead',col:'#eef0e6',sz:0.68},
- butterflybush:{body:'spike',col:'#8e6fbf',sw:0.105}  // thinner spikes → airier, less dense (issue #6)
+ butterflybush:{body:'spike',col:'#8e6fbf',sw:0.105},  // thinner spikes → airier, less dense (issue #6)
+ lilac:{body:'loose',ac:'cone',col:'#ccb2da',sz:0.9,fseed:102}   // picker #8 "Pale lilac": billowy shrub topped with upright violet panicles (Syringa vulgaris)
 };
 function elevShrubMarkup(it,cx,gy,rx,ch,rnd){
   const cfg=ELEV_SHRUB[it.pid]; if(!cfg) return '';
@@ -1641,6 +1642,24 @@ const ELEV_PEREN={
   mountainmint:{kind:'custom',rs:972,bush:{show:true,shape:'clump',wm:0.95,hm:0.55,col:'#5d7350',op:0.92},stem:{count:8,spread:0.7,lean:0.1,curve:0.04,w:0,hm:0.9,hvar:0.1,col:'#5d7350'},leaf:{mode:'none',shape:'lance',col:'#5d7350',len:0.2,wr:0.16,dens:6},flower:{shape:'mophead',place:'scatter',col:'#cfd8c5',sz:0.15,gap:2.8,accent:'#eef1e8'}},
   newenglandaster:{kind:'custom',rs:218,bush:{show:true,shape:'mound',wm:1.0,hm:0.9,col:'#4f6a40',op:0.94},stem:{count:5,spread:0.6,lean:0.1,curve:0.03,w:0,hm:0.85,hvar:0.1,col:'#4f6a40'},leaf:{mode:'none',shape:'lance',col:'#4f6a40',len:0.22,wr:0.18,dens:5},flower:{shape:'daisy',place:'bush',col:'#7d5ba6',sz:0.22,gap:2.88,center:false,accent:'#f2c14e'}},
   peony:{kind:'custom',rs:1818,bush:{show:true,shape:'mound',wm:1.0,hm:0.72,col:'#3f6b42',op:0.96},stem:{count:5,spread:0.55,lean:0.06,curve:0.03,w:0,hm:0.85,hvar:0.1,col:'#3f6b42'},leaf:{mode:'none',shape:'oval',col:'#3f6b42',len:0.24,wr:0.4,dens:5},flower:{shape:'mophead',place:'scatter',col:'#e8a9c0',sz:0.33,gap:2.5}},
+  // — wild columbine (picker #3, petite blooms; base tuft removed per Chloe): nodding red-and-yellow lanterns over a lacy basal rosette (Aquilegia canadensis)
+  wildcolumbine:{kind:'custom',rs:986,bush:{show:false,shape:'none',wm:0.7,hm:0.24,col:'#4f7048',op:0.9},stem:{count:4,spread:0.56,lean:0.22,curve:0.12,w:1.0,hm:0.88,hvar:0.2,col:'#4f7048'},leaf:{mode:'basal',shape:'palmate',col:'#4f7048',len:0.24,wr:0.4,dens:4},flower:{shape:'bells',place:'upper',col:'#c0392b',sz:0.216,count:4,accent:'#f2c14e'}},
+  // — wild geranium (picker #3, petite blooms): flat pink-lavender flowers over a lobed leafy mound (Geranium maculatum)
+  wildgeranium:{kind:'custom',rs:996,bush:{show:true,shape:'mound',wm:1.0,hm:0.55,col:'#5a7545',op:0.93},stem:{count:6,spread:0.6,lean:0.1,curve:0.03,w:0,hm:0.82,hvar:0.1,col:'#5a7545'},leaf:{mode:'none',shape:'palmate',col:'#5a7545',len:0.26,wr:0.4,dens:5,onBush:true,bushLen:0.3},flower:{shape:'daisy',place:'bush',col:'#cf90d4',sz:0.158,gap:2.1,accent:'#f2e8c8'}},
+  // — anise-scented goldenrod (picker #9, deeper gold): airy arching plume sprays over a low mound (Solidago odora)
+  anisegoldenrod:{kind:'custom',rs:1034,bush:{show:true,shape:'mound',wm:0.6,hm:0.5,col:'#5c7a3f',op:0.9},stem:{count:8,spread:0.62,lean:0.3,curve:0.16,w:0.9,hm:0.9,hvar:0.25,col:'#5c7a3f'},leaf:{mode:'alt',shape:'lance',col:'#5c7a3f',len:0.28,wr:0.14,dens:6,span:[0.1,0.72]},flower:{shape:'plume',place:'tops',col:'#c09a33',sz:0.82,count:8,accent:'#f7d777',arch:'out',archK:0.62,tipCurl:0.34}},
+  // — white wood aster (picker #4, fuller foliage): small white daisies with yellow eyes over a mound (Eurybia divaricata)
+  whitewoodaster:{kind:'custom',rs:1039,bush:{show:true,shape:'mound',wm:1.06,hm:0.86,col:'#4e6a40',op:0.94},stem:{count:5,spread:0.6,lean:0.1,curve:0.03,w:0,hm:0.85,hvar:0.1,col:'#4e6a40'},leaf:{mode:'none',shape:'lance',col:'#4e6a40',len:0.22,wr:0.18,dens:5},flower:{shape:'daisy',place:'bush',col:'#f4f3ee',sz:0.16,gap:2.6,center:true,accent:'#e6c24c'}},
+  // — blue flag iris (picker #1 + Chloe: yellow-touched, thicker & fewer petals): upright sword-leaf fan, ruffled violet blooms (Iris versicolor)
+  blueflagiris:{kind:'custom',rs:950,bush:{show:false,shape:'none',wm:0.7,hm:0.3,col:'#4e7a52',op:0.9},stem:{count:4,spread:0.34,lean:0.06,curve:0.03,w:1.1,hm:0.82,hvar:0.12,col:'#4e7a52'},leaf:{mode:'basal',shape:'lance',col:'#4e7a52',len:1.5,wr:0.09,dens:5,fan:0.62,tuftW:0.1},flower:{shape:'pom',place:'tops',col:'#6a5acd',sz:0.34,count:4,accent:'#e3c24e',droop:0.45,petals:7,pw:2.3}},
+  // — golden alexanders (picker #3 petite, no stems): flat-topped golden umbels studded over a leafy mound (Zizia aurea)
+  goldenalexanders:{kind:'custom',rs:966,bush:{show:true,shape:'mound',wm:0.95,hm:0.6,col:'#57743e',op:0.93},stem:{count:6,spread:0.6,lean:0.06,curve:0.03,w:0,hm:0.8,hvar:0.1,col:'#57743e'},leaf:{mode:'none',shape:'lance',col:'#57743e',len:0.2,wr:0.22,dens:4},flower:{shape:'corymb',place:'bush',col:'#e3c233',sz:0.158,gap:2.4,accent:'#f2df84'}},
+  // — foam flower (picker #2 bigger, 3 stems, no leaves): lupine-style white pea-spikes over a low mound (Tiarella cordifolia)
+  foamflower:{kind:'custom',rs:993,bush:{show:true,shape:'mound',wm:0.9,hm:0.35,col:'#4f7a45',op:0.92},stem:{count:3,spread:0.5,lean:0.06,curve:0.03,w:1.0,hm:0.92,hvar:0.16,col:'#4f7a45'},leaf:{mode:'none',shape:'oval',col:'#4f7a45',len:0.34,wr:0.7,dens:5,fan:1.0},flower:{shape:'peaspike',place:'tops',col:'#f1ece4',sz:0.86,count:11,accent:'#e4dcc8'}},
+  // — wild blue phlox (picker #4 fuller foliage, shorter stems): pale-blue flower clusters over a leafy mound (Phlox divaricata)
+  woodlandphlox:{kind:'custom',rs:1029,bush:{show:true,shape:'mound',wm:0.95,hm:0.6,col:'#557045',op:0.92},stem:{count:7,spread:0.62,lean:0.1,curve:0.05,w:0.8,hm:0.68,hvar:0.2,col:'#557045'},leaf:{mode:'none',shape:'lance',col:'#557045',len:0.2,wr:0.2,dens:5},flower:{shape:'corymb',place:'tops',col:'#8fa8d8',sz:0.26,count:7,accent:'#eef3fb'}},
+  // — golden groundsel (picker #5 airier): small yellow daisies in a loose flat cluster above a basal rosette (Packera aurea)
+  goldengroundsel:{kind:'custom',rs:1062,bush:{show:false,shape:'none',wm:0.7,hm:0.3,col:'#4d6f43',op:0.9},stem:{count:5,spread:0.55,lean:0.08,curve:0.03,w:0.9,hm:0.88,hvar:0.22,col:'#4d6f43'},leaf:{mode:'basal',shape:'oval',col:'#4d6f43',len:0.42,wr:0.6,dens:5,fan:1.1},flower:{shape:'daisy',place:'tops',col:'#e8b923',sz:0.24,count:3,accent:'#a9781a'}},
 };
 function elevDaylilyFlower(x,y,fr,col,throat,rnd){
   const q=n=>n.toFixed(2); let s='';const rot=rnd()*0.6;
@@ -1828,9 +1847,9 @@ function pnLeaves(cx,baseY,rx,ch,L,stems,rnd,B){
           const ln=L.len*(0.8+rnd()*0.35)*(1.05-f*0.35);
           s+=pnLeaf(p[0],p[1],ang,ln,L.shape,L.wr,rnd()>0.5?L.col:elevDarken(L.col,0.08),ink);});}});
   } else if(L.mode==='basal'){
-    const nb=Math.max(3,Math.round(L.dens*2.5)), by=baseY-0.02;
+    const nb=Math.max(3,Math.round(L.dens*2.5)), by=baseY-0.02, fan=L.fan!=null?L.fan:1.25, tw=L.tuftW!=null?L.tuftW:0.18;
     for(let i=0;i<nb;i++){const t=nb>1?(i/(nb-1))*2-1:0;
-      const ang=-Math.PI/2+t*1.25+(rnd()*2-1)*0.12, bx=cx+t*rx*0.18;
+      const ang=-Math.PI/2+t*fan+(rnd()*2-1)*0.12, bx=cx+t*rx*tw;
       const ln=L.len*(0.8+rnd()*0.4)*(1-Math.abs(t)*0.25);
       s+=pnLeaf(bx,by,ang,ln,L.shape,L.wr,i%2?L.col:elevDarken(L.col,0.08),ink);}
   } else if(L.mode==='scatter'){
@@ -1875,7 +1894,8 @@ function pnHeadCone(x,y,sz,F,rnd){
   return s+pnEgg(x,y-coneRy*0.4,coneRx,coneRy,rnd,cone,'rgba(0,0,0,.26)');
 }
 function pnHeadPom(x,y,sz,F,rnd){
-  const cy=y-sz*0.55, ink=elevDarken(F.col,0.3), drp=F.droop||0;let s='';const n1=14;
+  const cy=y-sz*0.55, ink=elevDarken(F.col,0.3), drp=F.droop||0;let s='';
+  const n1=Math.max(5,Math.round(F.petals||14)), pw=F.pw||1;   // F.petals=fewer/more tepals, F.pw=thicker petals
   // petal whose tip sags downward when drooping (bergamot's dangling tubular florets)
   const petal=(ang,len,wid,col)=>{
     if(!drp) return pnPetal(x,cy,ang,len,wid,col,ink);
@@ -1885,10 +1905,10 @@ function pnHeadPom(x,y,sz,F,rnd){
     return `<path d="M ${PNQ(x)} ${PNQ(cy)} Q ${PNQ(mx+px*wid)} ${PNQ(my+py*wid)} ${PNQ(tx)} ${PNQ(ty)} Q ${PNQ(mx-px*wid)} ${PNQ(my-py*wid)} ${PNQ(x)} ${PNQ(cy)} Z" fill="${col}" stroke="${ink}" stroke-width="0.5" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
   };
   for(let j=0;j<n1;j++){const a=-Math.PI/2+((j/(n1-1))-0.5)*Math.PI*(1.75+drp*0.8)+(rnd()*2-1)*0.07;
-    s+=petal(a,sz*(0.82+rnd()*0.34),sz*0.1,F.col);}
-  const n2=8;
+    s+=petal(a,sz*(0.82+rnd()*0.34),sz*0.1*pw,F.col);}
+  const n2=Math.max(3,Math.round(n1*0.57));
   for(let j=0;j<n2;j++){const a=-Math.PI/2+((j/(n2-1))-0.5)*Math.PI*1.3;
-    s+=petal(a,sz*0.52,sz*0.09,F.accent);}
+    s+=petal(a,sz*0.52,sz*0.09*pw,F.accent);}
   s+=`<circle cx="${PNQ(x)}" cy="${PNQ(cy)}" r="${PNQ(sz*0.17)}" fill="${elevDarken(F.col,0.18)}"/>`;
   return s;
 }
