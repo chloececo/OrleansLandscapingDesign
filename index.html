@@ -1436,6 +1436,28 @@ function elevConePath(bx,byy,tx,ty,w0,r){const dx=tx-bx,dy=ty-byy,len=Math.hypot
 function elevSpikesStr(cx,by,bodyRx,bodyTopH,col,wf){const w0=bodyTopH*(wf||0.141);   // width tied to spike length → keeps the picker's fat, non-pointy aspect at any height; wf overrides for airier (thinner) spikes
   const items=ELEV_SPIKE_PAT.map(p=>({bx:cx+p.x*bodyRx,baseY:by-p.base*bodyTopH,tx:cx+(p.x+p.lean)*bodyRx,ty:by-p.tip*bodyTopH}));
   let s='';items.sort((a,b)=>a.baseY-b.baseY).forEach((it,i)=>{s+=`<path d="${elevConePath(it.bx,it.baseY,it.tx,it.ty,w0,elevSeed(500+i*29))}" fill="${col}" fill-opacity=".95" stroke="rgba(0,0,0,.18)" stroke-width=".6" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;});return s;}
+// Butterfly bush: soft foliage mound studded THROUGHOUT with fat-based, fine-tipped bloom panicles
+// rendered as little dots in a range of purples (issue #16). cfg keys: fc, mound, gap, blen, bw, dot, dens, lean, pal, op.
+const ELEV_BLOOM_PAL=['#4a3390','#5f45a8','#7857b8','#9678c8'];   // deep → lighter violet
+function elevBloomDots(cx,gy,rx,ch,rnd,cfg){
+  const fc=cfg.fc||'#84987a', moundH=ch*(cfg.mound||0.82), rr=rx*(cfg.dot||0.03), pal=cfg.pal||ELEV_BLOOM_PAL;
+  const blen=cfg.blen||0.28, bw=cfg.bw||0.066, lean=cfg.lean||0.08, dens=cfg.dens||38, op=cfg.op||0.93;
+  let s=elevShFol(elevBush(cx,gy,rx,moundH,rnd,0.5),fc,0.92,1.3);
+  const bases=elevScatter(cx,gy,rx*0.88,moundH*0.9,rx*(cfg.gap||0.26),rnd,moundH*0.16,rx*0.05);   // panicle roots across the whole mound
+  const blooms=bases.map(p=>{const t=(p[0]-cx)/rx, len=ch*blen*(0.8+rnd()*0.45), ln=(t*lean+(rnd()*2-1)*0.05)*rx;
+    return {bx:p[0],surfY:p[1],len,lean:ln,w0:rx*bw*(0.85+rnd()*0.3)};});
+  blooms.sort((a,b)=>b.surfY-a.surfY).forEach(b=>{                // low → high so upper panicles layer on top
+    const count=Math.round(dens*(b.len/(ch*0.3)));
+    for(let k=0;k<count;k++){
+      const f=Math.pow(rnd(),0.62);                              // bias low → heavy fat base
+      const wid=b.w0*(1-f*0.78);                                 // taper base→tip
+      const x=b.bx+b.lean*f+(rnd()*2-1)*wid, y=b.surfY-f*b.len+(rnd()*2-1)*rr*0.4;
+      const jr=rr*(0.7+rnd()*0.5)*(1-f*0.2), c=pal[Math.floor(rnd()*pal.length)];
+      s+=`<circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="${jr.toFixed(2)}" fill="${c}" fill-opacity="${op}"/>`;
+    }
+  });
+  return s;
+}
 // hand-placed flower layouts (x = frac from center, y = center height as frac of body height)
 const ELEV_POS={
  viburnum:[{x:-0.9,y:0.15},{x:-0.64,y:0.67},{x:-0.63,y:0.35},{x:-0.41,y:0.07},{x:-0.28,y:0.58},{x:-0.17,y:0.91},{x:-0.13,y:0.32},{x:0.15,y:0.13},{x:0.18,y:0.5},{x:0.26,y:0.85},{x:0.49,y:0.29},{x:0.51,y:0.68},{x:0.72,y:0.07},{x:0.74,y:0.48},{x:1.01,y:0.27}],
@@ -1465,7 +1487,7 @@ const ELEV_SHRUB={
  chokeberry:{body:'upright',ac:'berry',col:'#39264a',bsz:1.584},
  shadbush:{body:'multistem',ac:'mophead',col:'#eef0e6',sz:1.1,pos:'shadbush',trunk:0.3},
  newjerseytea:{body:'loose',ac:'mophead',col:'#eef0e6',sz:0.68},
- butterflybush:{body:'spike',col:'#8e6fbf',sw:0.105},  // thinner spikes → airier, less dense (issue #6)
+ butterflybush:{body:'blooms',fc:'#84987a',mound:0.82,gap:0.26,blen:0.28,bw:0.066,dot:0.03,dens:38,lean:0.08,op:0.93},  // dotted bloom panicles throughout, deep violets (issue #16)
  lilac:{body:'loose',ac:'cone',col:'#ccb2da',sz:0.9,fseed:102}   // picker #8 "Pale lilac": billowy shrub topped with upright violet panicles (Syringa vulgaris)
 };
 function elevShrubMarkup(it,cx,gy,rx,ch,rnd){
@@ -1476,6 +1498,7 @@ function elevShrubMarkup(it,cx,gy,rx,ch,rnd){
   if(cfg.body==='box') s+=elevShFol(elevBox(cx,gy,ch,rnd),fc);
   else if(cfg.body==='columnar') s+=elevShFol(elevTallblob(cx,gy,rx,ch,rnd,0.3),fc);
   else if(cfg.body==='spike'){const tb=ch/1.61;s+=elevShFol(elevBush(cx,gy,rx,tb,rnd,0.5),fc);s+=elevSpikesStr(cx,gy,rx,tb,cfg.col,cfg.sw);}  // full-height mound; cones stay fat (non-pointy) via width-from-length in elevSpikesStr
+  else if(cfg.body==='blooms'){s+=elevBloomDots(cx,gy,rx,ch,rnd,cfg);}  // butterfly bush: dotted bloom panicles throughout (issue #16)
   else if(cfg.body==='multistem'){const tf=cfg.trunk||0.3,ccy=gy-ch*(tf+(1-tf)/2),cry=ch*(1-tf)/2;  // bare fanning trunks + lobed crown lifted above them
     (ELEV_STEMS[it.pid]||[]).forEach(st=>{const B=[cx+st.b[0]*rx,gy-st.b[1]*ch],C=[cx+st.c[0]*rx,gy-st.c[1]*ch],T=[cx+st.t[0]*rx,gy-st.t[1]*ch];
       s+=`<path d="${elevTaperStem(B,C,T,rx*0.11,rx*0.02)}" fill="#8a6b4a" fill-opacity=".95" stroke="rgba(0,0,0,.28)" stroke-width=".8" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;});
