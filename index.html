@@ -1557,9 +1557,21 @@ function elevOregano(cx,baseY,rx,ch,rnd,fill,stk){
   const n=Math.max(9,Math.round(mhw*3)),pts=[];
   for(let i=0;i<=n;i++){const a=Math.PI*(1-i/n),w=1+(rnd()*2-1)*0.05;pts.push([cx+Math.cos(a)*mhw*w,baseY-Math.sin(a)*mh*w]);}
   pts[0]=[cx-mhw,baseY];pts[n]=[cx+mhw,baseY];
-  let s=`<path d="${elevScallop(pts,[cx,baseY-mh*0.12],0.5,rnd,false)} L ${f(cx-mhw)} ${f(baseY)} Z" fill="${fill}" fill-opacity="0.92" stroke="${stk}" stroke-width="1.1" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
-  ELEV_OREGANO_LEAVES.forEach(l=>{const lx=cx+l.x*MRX*sc,ly=baseY-l.y*MH*sc,ang=(-90+l.a)*Math.PI/180,len=l.s*MH*sc;
-    s+=elevHerbLeaf(lx,ly,ang,len,len*0.34,'almond',fill,stk);});
+  const base=mhw*0.22;                             // rounded footprint that bulges below the soil (matches elevBush), so the base reads as a 3D mass instead of closing flat with sharp corners
+  let s=`<path d="${elevScallop(pts,[cx,baseY-mh*0.12],0.5,rnd,false)} Q ${f(cx)} ${f(baseY+base*2)} ${f(cx-mhw)} ${f(baseY)} Z" fill="${fill}" fill-opacity="0.92" stroke="${stk}" stroke-width="1.1" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
+  // fill the whole mound with small almond leaves — spread across the full silhouette
+  // (crown to base) and draping into the rounded bend, rather than one hand-placed cluster
+  const sp=mh*0.3,leaves=[];                        // leaf spacing scales with mound height, so the count stays consistent at any size
+  for(let gy=-base*0.5;gy<=mh*0.99;gy+=sp*0.7){
+    const fr=Math.max(0,gy)/mh;
+    const hw=(gy>=0?mhw*Math.sqrt(Math.max(0,1-fr*fr)):mhw*(1+gy/(base*2)))*0.97;  // follow the ellipse above soil; taper into the bend below it
+    if(hw<mhw*0.08){leaves.push([cx,baseY-gy,-Math.PI/2,mh*0.22]);continue;}       // single leaf at the crown
+    const cnt=Math.max(1,Math.round(hw*2/sp));
+    for(let k=0;k<cnt;k++){const t=cnt===1?0.5:k/(cnt-1),gx=-hw+2*hw*t+(rnd()*2-1)*sp*0.32,y2=gy+(rnd()*2-1)*sp*0.3;
+      leaves.push([cx+gx,baseY-y2,-Math.PI/2+(gx/mhw)*0.55+(rnd()*2-1)*0.38,mh*(0.2+rnd()*0.12)]);}
+  }
+  leaves.sort((a,b)=>a[1]-b[1]);                    // paint back-to-front so the lower leaves overlap on top
+  leaves.forEach(l=>{s+=elevHerbLeaf(l[0],l[1],l[2],l[3],l[3]*0.34,'almond',fill,stk);});
   return s;
 }
 // parsley: celery-like stalks, each carrying a head orb plus three leaf-orbs
