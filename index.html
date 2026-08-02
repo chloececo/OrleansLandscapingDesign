@@ -43,6 +43,10 @@ header.top .sub{color:var(--muted);font-size:14px}
   transition:fill .18s ease, stroke .12s ease}
 .bed:hover,.bed.grouphover{fill:var(--bc);fill-opacity:.42;stroke:var(--bc);stroke-opacity:.9}
 .bed.active{fill:var(--bc);fill-opacity:.5;stroke:var(--bc);stroke-opacity:1}
+/* Group selection box — wraps every polygon of a bed (incl. two-shape beds) */
+.bed:focus,.bed:focus-visible{outline:none}
+.selbox{fill:none;stroke:var(--accent);stroke-width:2.5;pointer-events:none;opacity:0;transition:opacity .12s}
+.selbox.show{opacity:1}
 .tag{pointer-events:none;font-family:Inter;font-weight:600;fill:#1f2119;
   paint-order:stroke;stroke:#fff;stroke-width:5px;stroke-linejoin:round;opacity:0;transition:opacity .15s}
 .bed:hover + .tag, .tag.show{opacity:1}
@@ -470,9 +474,17 @@ function buildOverlay(){
       el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();selectBed(bed.id);}});
       el.addEventListener('mouseenter',()=>{groupHover(bed.id,true);tagFor(bed.id,true);});
       el.addEventListener('mouseleave',()=>{groupHover(bed.id,false);if(sel.bed!==bed.id)tagFor(bed.id,false);});
+      el.addEventListener('focus',()=>setSelBox(bed.id,true));
+      el.addEventListener('blur',()=>setSelBox(bed.id,sel.bed===bed.id));
       ov.appendChild(el);
     });
     const b=bbox(allPts(bed));
+    // One selection box around the whole bed (both shapes of a two-polygon bed).
+    const sb=document.createElementNS(SVGNS,'rect');
+    sb.setAttribute('class','selbox'); sb.dataset.bed=bed.id;
+    sb.setAttribute('x',b.x0-8); sb.setAttribute('y',b.y0-8);
+    sb.setAttribute('width',b.x1-b.x0+16); sb.setAttribute('height',b.y1-b.y0+16);
+    sb.setAttribute('rx',8); ov.appendChild(sb);
     const tag=document.createElementNS(SVGNS,'text');
     tag.setAttribute('x',(b.x0+b.x1)/2); tag.setAttribute('y',(b.y0+b.y1)/2);
     tag.setAttribute('text-anchor','middle'); tag.setAttribute('class','tag'); tag.dataset.bed=bed.id;
@@ -504,11 +516,13 @@ function buildOverlay(){
 }
 function tagFor(id,on){const t=document.querySelector(`text.tag[data-bed="${id}"]`); if(t)t.classList.toggle('show',on);}
 function groupHover(id,on){document.querySelectorAll(`polygon.bed[data-bed="${id}"]`).forEach(e=>e.classList.toggle('grouphover',on));}
+function setSelBox(id,on){const b=document.querySelector(`rect.selbox[data-bed="${id}"]`);if(b)b.classList.toggle('show',on);}
 
 function selectBed(id){
   sel.bed=id; sel.plant=null; sel.editing=null; ensureLayout(id);
   placingVP=null; document.querySelector('.plan').classList.remove('placing');
   document.querySelectorAll('.bed').forEach(p=>p.classList.toggle('active',p.dataset.bed===id));
+  document.querySelectorAll('rect.selbox').forEach(b=>b.classList.toggle('show',b.dataset.bed===id));
   document.querySelectorAll('.tag').forEach(t=>t.classList.toggle('show',t.dataset.bed===id));
   renderDetail(); renderViewpoints();
   document.getElementById('detail').scrollIntoView({behavior:'smooth',block:'start'});
@@ -517,6 +531,7 @@ function closeDetail(){
   sel.bed=null; sel.plant=null; sel.editing=null;
   placingVP=null; document.querySelector('.plan').classList.remove('placing');
   document.querySelectorAll('.bed').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('rect.selbox').forEach(b=>b.classList.remove('show'));
   document.querySelectorAll('.tag').forEach(t=>t.classList.remove('show'));
   document.getElementById('detail').innerHTML='<div class="empty"><b>No bed selected.</b><br>Tap any colored bed on the plan above to start planting.</div>';
   renderViewpoints();
