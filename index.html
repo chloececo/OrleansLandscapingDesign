@@ -627,11 +627,49 @@ function renderDetail(){
   renderSchem(); renderElev(); renderList(); updateVpBtn(bed);
 }
 
+// ---- Per-bed rotation for the schematic ("circle bed") view ----
+// The tray is spun so each bed faces its DEFAULT aerial ✕ viewpoint: the near/
+// front edge (the side the viewpoint sits on) ends up at the BOTTOM, so the plan
+// tray reads the same way round as the default viewpoint and the elevation.
+// Purely a rendering (and drag) concern — it.x/it.y stay in the un-rotated
+// polysFt frame, so defaultLayout, the elevation, the oak, and "Reset" are all
+// unaffected.  #28/#34/#35 (and consistent for every bed).
+// Hand-tuned overrides (degrees clockwise; negative = counter-clockwise) for beds
+// where the square-on viewpoint framing isn't the desired look. The Shower Nook
+// is turned so its sharp point aims to the right (≈41° CW of the aerial shape).
+const SCHEM_ROT_OVERRIDE={shower:41};
+function bedRotDeg(bed){
+  if(bed.id in SCHEM_ROT_OVERRIDE) return SCHEM_ROT_OVERRIDE[bed.id];
+  const vp=DEFAULT_VP[bed.id]; if(!vp) return 0;
+  const c=bedCenterPx(bed); const gx=c[0]-vp[0], gy=c[1]-vp[1];   // gaze: viewpoint→bed centre
+  // Pick the quarter-turn that points that gaze straight up the tray (screen −y),
+  // dropping the viewpoint-side edge to the bottom. score = −(rotated gaze.y).
+  const score={0:-gy, 90:-gx, 180:gy, 270:gx};
+  return [90,180,270].reduce((a,b)=>score[b]>score[a]?b:a, 0);
+}
+// Build the schematic's rotation transform: spin the polysFt shape about its own
+// centre by bedRotDeg° (screen-clockwise, y down), then shift so the rotated
+// bounding box starts at the origin. Works for any angle, not just quarter-turns.
+//   fwd: un-rotated feet → display coords   ·   inv: display coords → un-rotated feet
+function schemTx(bed){
+  const polys=polysFt(bed); const[w0,h0]=bedSizeFt(bed); const deg=bedRotDeg(bed);
+  const th=deg*Math.PI/180, cs=Math.cos(th), sn=Math.sin(th), cx=w0/2, cy=h0/2;
+  const rot=(x,y)=>{const dx=x-cx,dy=y-cy;return [cx+dx*cs-dy*sn, cy+dx*sn+dy*cs];};
+  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+  polys.forEach(poly=>poly.forEach(p=>{const[X,Y]=rot(p[0],p[1]);
+    if(X<minX)minX=X; if(Y<minY)minY=Y; if(X>maxX)maxX=X; if(Y>maxY)maxY=Y;}));
+  return {
+    w:maxX-minX, h:maxY-minY, polys,
+    fwd(x,y){const[X,Y]=rot(x,y); return [X-minX, Y-minY];},
+    inv(X,Y){const ax=X+minX-cx, ay=Y+minY-cy; return [cx+cs*ax+sn*ay, cy-sn*ax+cs*ay];}
+  };
+}
+
 function renderSchem(){
-  const bed=bedById(sel.bed); const[wFt,hFt]=bedSizeFt(bed); const polys=polysFt(bed);
+  const bed=bedById(sel.bed); const[wFt,hFt]=bedSizeFt(bed); const tx=schemTx(bed);
   const svg=document.getElementById('schem');
-  svg.setAttribute('viewBox',`0 0 ${wFt} ${hFt}`); svg.style.maxHeight='430px'; svg.innerHTML='';
-  polys.forEach(poly=>{const sh=document.createElementNS(SVGNS,'polygon');sh.setAttribute('points',poly.map(p=>p.join(',')).join(' '));sh.setAttribute('class','bedshape');sh.style.setProperty('--bc',bed.color);sh.setAttribute('vector-effect','non-scaling-stroke');sh.setAttribute('stroke-width','1.5');svg.appendChild(sh);});
+  svg.setAttribute('viewBox',`0 0 ${tx.w} ${tx.h}`); svg.style.maxHeight='430px'; svg.innerHTML='';
+  tx.polys.forEach(poly=>{const sh=document.createElementNS(SVGNS,'polygon');sh.setAttribute('points',poly.map(p=>tx.fwd(p[0],p[1]).join(',')).join(' '));sh.setAttribute('class','bedshape');sh.style.setProperty('--bc',bed.color);sh.setAttribute('vector-effect','non-scaling-stroke');sh.setAttribute('stroke-width','1.5');svg.appendChild(sh);});
   const fs=Math.max(0.42,Math.min(wFt,hFt)*0.05); const lay=state.layouts[bed.id];
   // Draw existing (greyed) plants first so suggested plants render on top.
   lay.map((it,i)=>({it,i})).sort((a,b)=>(a.it.exist?0:1)-(b.it.exist?0:1)).forEach(({it,i})=>{
@@ -641,7 +679,7 @@ function renderSchem(){
     const editable=!it.exist || sel.editing===i;
     const g=document.createElementNS(SVGNS,'g');g.dataset.i=i;
     g.setAttribute('class','tok'+(it.exist?' exist':'')+(i===sel.plant?' sel':'')+(it.exist&&!editable?' locked':''));
-    g.setAttribute('transform',`translate(${it.x},${it.y})`);
+    {const[dxp,dyp]=tx.fwd(it.x,it.y);g.setAttribute('transform',`translate(${dxp},${dyp})`);}
     const ring=document.createElementNS(SVGNS,'circle');ring.setAttribute('class','ring');ring.setAttribute('r',r+0.12);ring.setAttribute('vector-effect','non-scaling-stroke');ring.setAttribute('stroke-width','1.5');
     const c=document.createElementNS(SVGNS,'circle');c.setAttribute('class','body');c.setAttribute('r',r);c.setAttribute('fill',pl.color);c.setAttribute('vector-effect','non-scaling-stroke');c.setAttribute('stroke-width','1.5');
     const t=document.createElementNS(SVGNS,'text');t.setAttribute('font-size',Math.min(fs,r*0.95));t.textContent=abbr(pl.name);
@@ -2343,13 +2381,16 @@ function hideElevTip(){const t=document.getElementById('eltip');if(t)t.classList
 let drag=null;
 function svgPt(svg,e){const r=svg.getBoundingClientRect();const vb=svg.viewBox.baseVal;return[vb.x+(e.clientX-r.left)/r.width*vb.width,vb.y+(e.clientY-r.top)/r.height*vb.height];}
 function startDrag(e){e.preventDefault();const g=e.currentTarget;const i=+g.dataset.i;sel.plant=i;if(!state.layouts[sel.bed][i].exist)sel.editing=null;renderList();markSel();
-  const svg=document.getElementById('schem');const[px,py]=svgPt(svg,e);const it=state.layouts[sel.bed][i];drag={i,g,svg,dx:px-it.x,dy:py-it.y};
+  const svg=document.getElementById('schem');const[px,py]=svgPt(svg,e);const it=state.layouts[sel.bed][i];
+  const tx=schemTx(bedById(sel.bed));const[dxp,dyp]=tx.fwd(it.x,it.y);
+  drag={i,g,svg,dx:px-dxp,dy:py-dyp,tx};
   g.setPointerCapture(e.pointerId);g.addEventListener('pointermove',onDrag);g.addEventListener('pointerup',endDrag);g.addEventListener('pointercancel',endDrag);}
-function onDrag(e){if(!drag)return;const[px,py]=svgPt(drag.svg,e);const bed=bedById(sel.bed);const polys=polysFt(bed);const it=state.layouts[sel.bed][drag.i];const nx=px-drag.dx,ny=py-drag.dy;
-  if(bed.polygons.length>1||inAny(nx,ny,polys)){it.x=nx;it.y=ny;drag.g.setAttribute('transform',`translate(${nx},${ny})`);}}
+function onDrag(e){if(!drag)return;const[px,py]=svgPt(drag.svg,e);const bed=bedById(sel.bed);const polys=polysFt(bed);const it=state.layouts[sel.bed][drag.i];
+  const nx=px-drag.dx,ny=py-drag.dy;const[ux,uy]=drag.tx.inv(nx,ny);   // display → stored frame
+  if(bed.polygons.length>1||inAny(ux,uy,polys)){it.x=ux;it.y=uy;drag.g.setAttribute('transform',`translate(${nx},${ny})`);}}
 function endDrag(e){if(!drag)return;const g=drag.g;g.removeEventListener('pointermove',onDrag);g.removeEventListener('pointerup',endDrag);g.removeEventListener('pointercancel',endDrag);
   const bed=bedById(sel.bed);const polys=polysFt(bed);const it=state.layouts[sel.bed][drag.i];
-  if(!inAny(it.x,it.y,polys)){const np=nearestPt(it.x,it.y,interiorPts(bed));it.x=np[0];it.y=np[1];g.setAttribute('transform',`translate(${it.x},${it.y})`);}
+  if(!inAny(it.x,it.y,polys)){const np=nearestPt(it.x,it.y,interiorPts(bed));it.x=np[0];it.y=np[1];const[dxp,dyp]=drag.tx.fwd(it.x,it.y);g.setAttribute('transform',`translate(${dxp},${dyp})`);}
   drag=null;save();renderElev();}
 // ---- Elevation drag: reposition a plant by dragging its silhouette in the side view ----
 // The elevation is an oblique projection of the plan, so we move the token live in pure
