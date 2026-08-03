@@ -151,11 +151,35 @@ svg.schem{display:block;width:100%;height:auto;touch-action:none}
 .ctrls label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px;font-weight:500}
 select,.btn{font-family:Inter;font-size:14px;color:var(--ink)}
 select{width:100%;padding:9px 10px;border:1px solid var(--line2);border-radius:9px;background:var(--card);cursor:pointer}
-.row2{display:flex;gap:8px;align-items:flex-end}
-.row2 > div{flex:1}
 .btn{appearance:none;border:1px solid var(--line2);background:var(--paper2);border-radius:9px;padding:9px 12px;cursor:pointer;white-space:nowrap;font-weight:500}
 .btn:hover{background:#e4e8d8}
 .btn.ghost{background:none}
+/* Add-plant palette: a scannable grid of plant "ID cards" (icon + name + facts),
+   grouped by category, replacing the old text-only <select>. */
+.adddrop{position:relative}
+.addtrigger{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left}
+.addtrigger .caret{color:var(--muted);transition:transform .15s}
+.addtrigger.open .caret{transform:rotate(180deg)}
+.addpanel{display:flex;flex-direction:column;gap:10px;margin-top:8px;padding:10px;border:1px solid var(--line2);border-radius:11px;background:var(--card);box-shadow:var(--shadow)}
+.addpanel[hidden]{display:none}
+.palfilter{width:100%;padding:8px 11px;border:1px solid var(--line2);border-radius:9px;background:var(--card);font-family:Inter;font-size:13.5px;color:var(--ink);box-sizing:border-box}
+.palfilter:focus{outline:none;border-color:var(--accent)}
+.palette{display:flex;flex-direction:column;gap:12px;max-height:320px;overflow:auto;padding-right:2px}
+.palgroup{display:flex;flex-direction:column;gap:7px}
+/* class display rules above out-specify the UA [hidden] rule, so restate it for the filter */
+.palgroup[hidden],.plcard[hidden],.palnone[hidden]{display:none}
+.palhead{margin:0;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;position:sticky;top:0;z-index:1;background:var(--card);padding:2px 0 3px}
+.palnone{font-size:12.5px;color:var(--muted);padding:4px 2px}
+.palcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(82px,1fr));gap:8px}
+.plcard{appearance:none;border:1px solid var(--line2);background:var(--card);border-radius:11px;padding:8px 6px 7px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;text-align:center;font-family:Inter;color:var(--ink);transition:border-color .12s,background .12s,transform .06s}
+.plcard:hover{background:var(--paper2);border-color:var(--accent)}
+.plcard:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.plcard:active{transform:translateY(1px)}
+.picon-wrap{width:100%;height:50px;display:flex;align-items:flex-end;justify-content:center}
+.picon{width:100%;height:100%;overflow:visible}
+.pcname{font-size:12px;font-weight:500;line-height:1.15}
+.pcmeta{font-size:10.5px;color:var(--muted);line-height:1.1}
+.pccount{font-size:9.5px;font-weight:600;color:var(--accent);background:var(--paper2);border:1px solid var(--line2);border-radius:999px;padding:1px 6px;margin-top:2px}
 .selnote{font-size:12.5px;color:var(--muted);margin:0 0 8px}
 .selnote b{color:var(--ink)}
 footer{color:var(--muted);font-size:12px;margin-top:22px;text-align:center}
@@ -181,7 +205,6 @@ footer{color:var(--muted);font-size:12px;margin-top:22px;text-align:center}
 .wiki:hover{color:#27543a}
 .pt{display:inline-block;margin:0 0 4px;font-size:13px;color:#3f6b53;text-decoration:none;border-bottom:1px solid #bcd3b0}
 .pt:hover{color:#27543a}
-.swaplab{font-size:12px;color:var(--muted);display:block;margin-bottom:4px;font-weight:500}
 /* ---- Elevation view ---- */
 .elevwrap{position:relative;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
 .elevwrap .cap{font-size:12px;color:var(--muted);margin:0 0 10px;display:flex;justify-content:space-between;align-items:center;gap:10px}
@@ -528,7 +551,7 @@ function selectBed(id){
   document.getElementById('detail').scrollIntoView({behavior:'smooth',block:'start'});
 }
 function closeDetail(){
-  sel.bed=null; sel.plant=null; sel.editing=null;
+  sel.bed=null; sel.plant=null; sel.editing=null; palOpen=false; palQuery='';
   placingVP=null; document.querySelector('.plan').classList.remove('placing');
   document.querySelectorAll('.bed').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('rect.selbox').forEach(b=>b.classList.remove('show'));
@@ -565,8 +588,12 @@ function renderDetail(){
       </div>
       <div class="side">
         <div id="selctrl"></div>
-        <div class="ctrls"><div><label for="addsel">Add a plant</label>
-          <div class="row2"><div><select id="addsel"></select></div><button class="btn" id="addbtn">Add</button></div></div></div>
+        <div class="ctrls"><div class="adddrop" id="adddrop">
+          <button type="button" class="btn addtrigger" id="addtrigger" aria-haspopup="true" aria-expanded="false" aria-controls="addpanel">＋ Add a plant<span class="caret" aria-hidden="true">▾</span></button>
+          <div class="addpanel" id="addpanel" hidden>
+            <input type="search" id="palfilter" class="palfilter" placeholder="Search plants…" autocomplete="off" aria-label="Search plants to add">
+            <div class="palette" id="palette"></div>
+          </div></div></div>
         <h3>Plants in this bed</h3>
         <ul class="plist" id="plist"></ul>
       </div>
@@ -574,8 +601,22 @@ function renderDetail(){
   det.appendChild(panel);
   panel.querySelector('.close').onclick=closeDetail;
   panel.querySelector('#resetBed').onclick=()=>{const keep=state.layouts[bed.id].filter(p=>p.exist);state.layouts[bed.id]=[...keep,...defaultLayout(bed)];sel.plant=null;sel.editing=null;save();renderDetail();};
-  fillSelect(panel.querySelector('#addsel'),null);
-  panel.querySelector('#addbtn').onclick=()=>{const pid=panel.querySelector('#addsel').value;const pts=interiorPts(bed);const c=pts[Math.floor(pts.length/2)];state.layouts[bed.id].push({pid,x:c[0],y:c[1]});sel.plant=state.layouts[bed.id].length-1;save();renderDetail();};
+  const addpanel=panel.querySelector('#addpanel'), addtrigger=panel.querySelector('#addtrigger');
+  let addFilled=false;
+  // Fill the grid lazily on first open: fillPalette fits each icon via getBBox, which
+  // returns 0 inside a display:none panel — so it must run only once the panel is shown.
+  const fillOnce=()=>{ if(addFilled)return; addFilled=true;
+    fillPalette(panel.querySelector('#palette'),bed);
+    const pf=panel.querySelector('#palfilter'); pf.value=palQuery;
+    pf.oninput=()=>{palQuery=pf.value;filterPalette(panel.querySelector('#palette'),palQuery);};
+    filterPalette(panel.querySelector('#palette'),palQuery);
+  };
+  const setAddOpen=open=>{ palOpen=open; addpanel.hidden=!open;
+    addtrigger.setAttribute('aria-expanded',open?'true':'false'); addtrigger.classList.toggle('open',open);
+    if(open){ fillOnce(); panel.querySelector('#palfilter').focus(); } };
+  addtrigger.onclick=()=>setAddOpen(!palOpen);
+  addpanel.addEventListener('keydown',e=>{ if(e.key==='Escape'){ setAddOpen(false); addtrigger.focus(); } });
+  setAddOpen(palOpen);   // restore open state across the re-render an add triggers
   panel.querySelector('#setvp').onclick=()=>{ placingVP = placingVP===bed.id ? null : bed.id; document.querySelector('.plan').classList.toggle('placing', !!placingVP); if(placingVP) document.querySelector('.plan').scrollIntoView({behavior:'smooth',block:'start'}); renderViewpoints(); updateVpBtn(bed); };
   panel.querySelector('#clrvp').onclick=()=>{ delete state.viewpoints[bed.id]; placingVP=null; save(); document.querySelector('.plan').classList.remove('placing'); renderViewpoints(); renderElev(); updateVpBtn(bed); };
   renderSchem(); renderElev(); renderList(); updateVpBtn(bed);
@@ -2456,11 +2497,89 @@ function renderSelCtrl(){const box=document.getElementById('selctrl');if(!box)re
         <a class="wiki" href="https://en.wikipedia.org/wiki/${pl.wiki}" target="_blank" rel="noopener">Learn more on Wikipedia \u2197</a>
         <a class="pt" href="${ptUrl(pl)}" target="_blank" rel="noopener">Care info on PictureThis \u2197</a>
       </div>
-      <label class="swaplab" for="swapsel">Swap this plant for another</label>
-      <select id="swapsel"></select>
     </div>`;
-  const s=box.querySelector('#swapsel');fillSelect(s,it.pid);s.onchange=()=>{it.pid=s.value;save();syncViews();};}
-function fillSelect(s,selected){const cats={};Object.entries(PLANTS).forEach(([id,p])=>{(cats[p.cat]=cats[p.cat]||[]).push([id,p]);});let h='';Object.keys(cats).sort().forEach(cat=>{h+=`<optgroup label="${cat}">`;cats[cat].sort((a,b)=>a[1].name.localeCompare(b[1].name)).forEach(([id,p])=>{h+=`<option value="${id}" ${id===selected?'selected':''}>${p.name} · ${p.spread} ft · ${p.light}</option>`;});h+='</optgroup>';});s.innerHTML=h;}
+}
+
+// ---- Add-plant palette (grid of plant "ID cards"), shown in a collapsible dropdown ----
+let palQuery='', palOpen=false;
+function addPlant(bed,pid){const pts=interiorPts(bed);const c=pts[Math.floor(pts.length/2)];state.layouts[bed.id].push({pid,x:c[0],y:c[1]});sel.plant=state.layouts[bed.id].length-1;save();renderDetail();}
+// One plant's elevation silhouette on a flat ground line — same per-category art the
+// bed's elevation uses, so a card previews exactly how the plant will be drawn. Returns
+// inner SVG markup; the caller fits the viewBox to the drawn bounds.
+function plantIconInner(pid){
+  const pl=PLANTS[pid]; if(!pl) return '';
+  const it={pid}, rnd=elevRng(it);
+  const rx=Math.max(0.7,showW(it)/2);
+  let ch=showHt(it); if(pl.cat==='Tree')ch=Math.min(ch,12); ch=Math.max(1,ch);
+  const bx=0,by=0;
+  if(pl.cat==='Tree'){
+    const trunkH=ch*0.42, cr=Math.max(rx,ch*0.32);
+    return `<path d="${elevTrunk(bx,by,trunkH,cr*0.24)}" fill="#9c7a55" stroke="rgba(0,0,0,.16)" stroke-width="0.8" vector-effect="non-scaling-stroke"/>`+
+      `<path d="${elevBlob(bx,by-trunkH-(ch-trunkH)/2,cr,(ch-trunkH)/2,rnd)}" fill="${pl.color}" fill-opacity="0.9" stroke="rgba(0,0,0,.26)" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
+  }
+  if(pl.cat==='Grass'&&ELEV_GRASS[pid]) return elevGrassMarkup(it,bx,by,rx,ch);
+  if(pl.cat==='Grass'){
+    return `<path d="${elevGrassTuft(bx,by,rx)}" fill="${pl.color}" fill-opacity="0.5"/>`+
+      `<path d="${elevGrassBlades(bx,by,rx,ch*1.05,rnd)}" fill="none" stroke="${elevDarken(pl.color,0.3)}" stroke-width="1.8" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`;
+  }
+  if(pl.cat==='Shrub'&&ELEV_SHRUB[pid]) return elevShrubMarkup(it,bx,by,rx,ch,rnd);
+  if(pl.cat==='Herb'&&ELEV_HERB[pid]) return elevHerbMarkup(it,bx,by,rx,ch,rnd);
+  if(pl.cat==='Fern'&&ELEV_FERN[pid]) return elevFernMarkup(it,bx,by,rx,ch);
+  if(pl.cat==='Vine'&&ELEV_VINE[pid]) return elevVineMarkup(it,bx,by,rx,ch);
+  if(pl.cat==='Perennial'&&ELEV_PEREN[pid]) return elevPerenMarkup(it,bx,by,rx,ch);
+  if(pl.cat==='Groundcover'&&ELEV_GROUND[pid]) return elevGroundMarkup(it,bx,by,rx,ch);
+  return `<path d="${elevBush(bx,by,rx,ch*1.1,rnd)}" fill="${pl.color}" fill-opacity="0.92" stroke="rgba(0,0,0,.24)" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
+}
+function fillPalette(container,bed){
+  const cats={}; Object.entries(PLANTS).forEach(([id,p])=>{(cats[p.cat]=cats[p.cat]||[]).push([id,p]);});
+  const counts={}; (state.layouts[bed.id]||[]).forEach(it=>{counts[it.pid]=(counts[it.pid]||0)+1;});
+  const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  let h='';
+  Object.keys(cats).sort().forEach(cat=>{
+    h+=`<div class="palgroup"><h4 class="palhead">${esc(cat)}</h4><div class="palcards">`;
+    cats[cat].sort((a,b)=>a[1].name.localeCompare(b[1].name)).forEach(([id,p])=>{
+      const n=counts[id]||0, search=esc((p.name+' '+(p.sci||'')).toLowerCase());
+      h+=`<button type="button" class="plcard" data-pid="${esc(id)}" data-search="${search}" title="Add ${esc(p.name)}${n?` (${n} already in this bed)`:''}">`+
+         `<span class="picon-wrap"><svg class="picon" preserveAspectRatio="xMidYMax meet">${plantIconInner(id)}</svg></span>`+
+         `<span class="pcname">${esc(p.name)}</span>`+
+         `<span class="pcmeta">${esc(p.spread)} ft · ${esc(p.light)}</span>`+
+         (n?`<span class="pccount">${n} in bed</span>`:'')+
+         `</button>`;
+    });
+    h+='</div></div>';
+  });
+  h+='<div class="palnone" hidden>No plants match your search.</div>';
+  container.innerHTML=h;
+  // Elevation art is drawn in feet with the ground at y=0; fit each icon's viewBox to
+  // its own drawn bounds so every card previews at a comparable, box-filling size.
+  container.querySelectorAll('svg.picon').forEach(svg=>{const bb=svg.getBBox();const m=0.35;
+    if(bb.width&&bb.height)svg.setAttribute('viewBox',`${bb.x-m} ${bb.y-m} ${bb.width+2*m} ${bb.height+2*m}`);});
+  container.querySelectorAll('.plcard').forEach(card=>{card.onclick=()=>addPlant(bed,card.dataset.pid);});
+}
+function filterPalette(container,q){
+  q=(q||'').trim().toLowerCase(); let total=0;
+  container.querySelectorAll('.palgroup').forEach(group=>{
+    let any=false;
+    group.querySelectorAll('.plcard').forEach(card=>{
+      const match=!q||card.dataset.search.includes(q);
+      card.hidden=!match; if(match){any=true;total++;}
+    });
+    group.hidden=!any;
+  });
+  const none=container.querySelector('.palnone'); if(none)none.hidden=total>0;
+}
+
+// Close the add-plant dropdown when clicking anywhere outside it (a card click lands
+// inside #adddrop, so adding a plant keeps it open for picking several in a row).
+document.addEventListener('pointerdown',e=>{
+  if(!palOpen)return;
+  const dd=document.getElementById('adddrop');
+  if(dd&&!dd.contains(e.target)){
+    palOpen=false;
+    const ap=document.getElementById('addpanel'); if(ap)ap.hidden=true;
+    const tr=document.getElementById('addtrigger'); if(tr){tr.setAttribute('aria-expanded','false');tr.classList.remove('open');}
+  }
+});
 
 load(); buildOverlay(); renderViewpoints();
 
