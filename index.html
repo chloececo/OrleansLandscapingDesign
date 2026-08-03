@@ -2531,7 +2531,7 @@ function plantIconInner(pid){
   return `<path d="${elevBush(bx,by,rx,ch*1.1,rnd)}" fill="${pl.color}" fill-opacity="0.92" stroke="rgba(0,0,0,.24)" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
 }
 function fillPalette(container,bed){
-  const cats={}; Object.entries(PLANTS).forEach(([id,p])=>{(cats[p.cat]=cats[p.cat]||[]).push([id,p]);});
+  const cats={}; Object.entries(PLANTS).forEach(([id,p])=>{if(id==='oak')return;(cats[p.cat]=cats[p.cat]||[]).push([id,p]);});
   const counts={}; (state.layouts[bed.id]||[]).forEach(it=>{counts[it.pid]=(counts[it.pid]||0)+1;});
   const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   let h='';
