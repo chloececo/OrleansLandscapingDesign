@@ -295,8 +295,13 @@ const HTCAT={Tree:30,Shrub:5,Grass:3,Fern:3,Perennial:2.5,Herb:1.5,Groundcover:0
 function plantHt(pid){const p=PLANTS[pid];if(!p)return 2;if(HT[pid]!=null)return HT[pid];return HTCAT[p.cat]||2;}
 // Height as drawn in the elevation (tall trees/vines capped so a bed still reads).
 function showHt(it){const p=PLANTS[it.pid];let ht=plantHt(it.pid);if(!p)return ht;if(p.cat==='Tree')ht=Math.min(ht,16);if(p.cat==='Vine')ht=Math.min(ht,10);return Math.max(0.3,ht);}
-// Width as drawn — existing plants may carry a custom diameter (r).
-function showW(it){const def=it.exist?existDef(it.eid):null;return Math.max(0.7,(def&&def.r)||(PLANTS[it.pid]?PLANTS[it.pid].spread:1.5));}
+// Canopy diameter as drawn in the elevation — the SAME canopy the plan circle uses
+// in renderSchem: suggested plants get the RAD_SCALE "settling-in" size, existing
+// plants their true (or custom-r) size, so one plant reads the same width in both
+// views. (Mirrors the radius picked at renderSchem's plant loop.)  #23
+function showW(it){const pl=PLANTS[it.pid],def=it.exist?existDef(it.eid):null;
+  const r=it.exist?Math.max(0.55,((def&&def.r)||(pl?pl.spread:1.5))/2):plantRadius(pl?pl.spread:1.5);
+  return r*2;}
 // O.C. spacing label derived from mature spread.
 function ocLabel(pid){const s=PLANTS[pid]?PLANTS[pid].spread:1.5;return s<1.5?`${Math.round(s*12)}″ O.C.`:`${s%1?s.toFixed(1):s}′ O.C.`;}
 
@@ -2118,8 +2123,11 @@ function elevPerenMarkup(it,cx,baseY,rx,ch){
 function drawElevation(svg,bed,lay,view,topH){
   const axis=view.axis;
   const {hspan}=elevDims(bed,axis);
-  const RISE=Math.min(topH*0.6, hspan*0.55);     // how far the back of the bed lifts
-  const SKEW=hspan*0.10;                          // and how far it shears to the right
+  // Shallower depth projection than a true perspective: a smaller lift + shear keeps
+  // depth-separated plants stacked over each other (canopies interleave, filling the
+  // gaps) instead of sliding apart into bare ground/sky the way a deep rake does.  #21
+  const RISE=Math.min(topH*0.34, hspan*0.3);     // how far the back of the bed lifts
+  const SKEW=hspan*0.045;                         // and how far it shears to the right
   const padX=0.6, VBH=topH+RISE+1.0, groundF=VBH-0.5;
   svg.setAttribute('viewBox',`${-padX} 0 ${hspan+SKEW+2*padX} ${VBH}`);
   svg.style.maxHeight='460px';
