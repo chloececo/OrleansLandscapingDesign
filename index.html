@@ -1230,10 +1230,12 @@ function elevGCThyme(c,rnd,cx,by,rx,ch){
   const n=26,pts=[];
   for(let i=0;i<=n;i++){const x=cx-W+2*W*i/n;pts.push([x,by-Math.max(pr(x),0.012)]);}
   pts[0]=[cx-W,by];pts[n]=[cx+W,by];
-  let s=`<path d="${elevGScallop(pts,[cx,by],0.20,rnd,false)} L ${q(cx-W)} ${q(by)} Z" fill="${fc}" stroke="rgba(0,0,0,.18)" stroke-width="0.008" stroke-linejoin="round"/>`;
+  const bdip=W*0.22;                                 // curved footprint: base bows below the soil as a rounded arc, so the mat sits on a soft mound instead of a flat edge
+  const baseAt=x=>{const ux=(x-cx)/W;return bdip*(1-ux*ux)/2;};   // how far the footprint dips below the soil at x
+  let s=`<path d="${elevGScallop(pts,[cx,by],0.20,rnd,false)} Q ${q(cx)} ${q(by+bdip)} ${q(cx-W)} ${q(by)} Z" fill="${fc}" stroke="rgba(0,0,0,.18)" stroke-width="0.008" stroke-linejoin="round"/>`;
   const nl=Math.round(46*(c.ld==null?1:c.ld));
   for(let i=0;i<nl;i++){const x=cx-W+rnd()*2*W,h=pr(x);if(h<0.03)continue;
-    const y=by-rnd()*h*0.96-0.008;
+    const y=by-rnd()*(h+baseAt(x))*0.96-0.008+baseAt(x);   // spread leaves from the crown down into the rounded bend below the soil line
     const a=-Math.PI/2+(x-cx)/W*0.9+(rnd()*2-1)*0.5;
     s+=elevGLeaf(elevGLens(x,y,Math.cos(a),Math.sin(a),0.045,0.5,0.03),pal[Math.floor(rnd()*3)]);}
   for(let i=0;i<(c.run||0);i++){const sd=i%2?1:-1,sx=cx+sd*W*0.97,L2=0.16+rnd()*0.22;
@@ -1246,14 +1248,14 @@ function elevGCThyme(c,rnd,cx,by,rx,ch){
     const pts2=[];
     for(let i=0;i<=n;i++){const x=cx-W*0.97+2*W*0.97*i/n;pts2.push([x,by-Math.max(pr(x)*0.9,0.008)]);}
     pts2[0]=[cx-W*0.97,by];pts2[n]=[cx+W*0.97,by];
-    s+=`<path d="${elevGScallop(pts2,[cx,by],0.2,rnd,false)} L ${q(cx-W*0.97)} ${q(by)} Z" fill="${c.col}" fill-opacity="0.88"/>`;
+    s+=`<path d="${elevGScallop(pts2,[cx,by],0.2,rnd,false)} Q ${q(cx)} ${q(by+bdip*0.9)} ${q(cx-W*0.97)} ${q(by)} Z" fill="${c.col}" fill-opacity="0.88"/>`;
     for(let i=0;i<70;i++){const x=cx-W+rnd()*2*W,h=pr(x)*0.9;if(h<0.02)continue;
       const y=by-rnd()*h;
       s+=`<circle cx="${q(x)}" cy="${q(y)}" r="0.014" fill="${i%3?elevMixw(c.col,.35):elevDarken(c.col,.18)}"/>`;}
   }else if(c.bloom){
-    const nB=Math.round(60*c.bloom*(W/0.75));
-    const got=elevScatG(rnd,nB,0.052,()=>{const x=cx-W+rnd()*2*W,h=pr(x);
-      if(h<0.035)return null;return [x,by-h*(0.4+rnd()*0.62)];});
+    const nB=Math.round(72*c.bloom*(W/0.75));
+    const got=elevScatG(rnd,nB,0.05,()=>{const x=cx-W+rnd()*2*W,h=pr(x);
+      if(h<0.02)return null;return [x,by-rnd()*(h+baseAt(x))+baseAt(x)];});   // scatter over the whole mound, crown down into the rounded base
     got.forEach(p=>{const col=rnd()<0.3?elevMixw(c.col,.3):c.col;
       for(let k=0;k<3;k++)s+=`<circle cx="${q(p[0]+(rnd()*2-1)*0.02)}" cy="${q(p[1]+(rnd()*2-1)*0.016)}" r="0.017" fill="${col}" stroke="rgba(0,0,0,.12)" stroke-width="0.004"/>`;});
   }
@@ -1686,8 +1688,13 @@ function elevHerbMat(cx,baseY,rx,topH,rnd,fill,stk,flw){
   const th=Math.min(topH,rx*0.55),nb=Math.max(11,Math.round(rx*1.1)),pts=[],f=v=>v.toFixed(2);
   for(let i=0;i<=nb;i++){const a=Math.PI*(1-i/nb),w=1+(rnd()*2-1)*0.05;pts.push([cx+Math.cos(a)*rx*1.15*w,baseY-Math.sin(a)*th*w]);}
   pts[0]=[cx-rx*1.15,baseY];pts[nb]=[cx+rx*1.15,baseY];
-  let s=`<path d="${elevScallop(pts,[cx,baseY],0.65,rnd,false)} L ${f(cx-rx*1.15)} ${f(baseY)} Z" fill="${fill}" fill-opacity="0.9" stroke="${stk}" stroke-width="1" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
-  for(let i=0;i<10;i++){s+=`<circle cx="${f(cx+(rnd()*2-1)*rx*1.02)}" cy="${f(baseY-rnd()*th*0.9)}" r="${f(rx*0.08)}" fill="${flw}"/>`;}
+  const HW=rx*1.15,base=HW*0.22;                     // rounded footprint that bulges below the soil (matches elevBush/oregano), so the mat's base reads as a soft mound instead of a flat edge
+  let s=`<path d="${elevScallop(pts,[cx,baseY],0.65,rnd,false)} Q ${f(cx)} ${f(baseY+base*2)} ${f(cx-HW)} ${f(baseY)} Z" fill="${fill}" fill-opacity="0.9" stroke="${stk}" stroke-width="1" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
+  const prof=x=>{const ux=Math.max(-1,Math.min(1,(x-cx)/HW));return th*Math.sqrt(Math.max(0,1-ux*ux));};   // mound height at x
+  const bAt=x=>{const ux=(x-cx)/HW;return base*(1-ux*ux);};                                                 // how far the base bulges below the soil at x
+  elevScatG(rnd,16,HW*0.19,()=>{const x=cx+(rnd()*2-1)*HW*0.95,hh=prof(x),bb=bAt(x);                        // Poisson scatter → flowers spread evenly over the whole mound, crown down into the rounded base
+    return [x,baseY-rnd()*(hh+bb)+bb];})
+    .forEach(p=>{s+=`<circle cx="${f(p[0])}" cy="${f(p[1])}" r="${f(rx*0.08)}" fill="${flw}"/>`;});
   return s;
 }
 // chives: a grassy tuft of blades tipped with round flower heads
@@ -1960,11 +1967,14 @@ function pnCorymb(cx,baseY,rx,ch,c,rnd){
 // daylily — fountain of arching strap leaves + six-petal trumpet scapes
 function pnDaylily(cx,baseY,rx,ch,c,rnd){
   const q=n=>n.toFixed(2), lh=ch*0.52, lc=c.lc; let s='';
+  const moundH=ch*0.26, dome=t=>Math.sqrt(Math.max(0,1-t*t));   // roots dip below the soil at the centre so the foliage base rounds down into the ground (like the mats), not up into a hump
   for(let i=0;i<9;i++){const t=(i/8)*2-1, bx=cx+t*rx*0.25, tipX=cx+t*rx*1.15+(rnd()*2-1)*0.06;const h=lh*(0.6+0.4*(1-Math.abs(t)))*(0.85+rnd()*0.3);
-    s+=`<path d="M ${q(bx)} ${q(baseY)} Q ${q(cx+t*rx*0.5)} ${q(baseY-h*1.05)} ${q(tipX)} ${q(baseY-h*0.82)}" fill="none" stroke="${lc}" stroke-width="0.09" stroke-linecap="round"/>`;}
+    const rootY=baseY+moundH*0.5*dome(t);                        // round the start of each blade down into the soil-line bend
+    s+=`<path d="M ${q(bx)} ${q(rootY)} Q ${q(cx+t*rx*0.5)} ${q(baseY-h*1.05)} ${q(tipX)} ${q(baseY-h*0.82)}" fill="none" stroke="${lc}" stroke-width="0.09" stroke-linecap="round"/>`;}
   const sc=elevDarken(lc,0.15);
   for(let i=0;i<c.ns;i++){const t=(i/(c.ns-1))*2-1, bx=cx+t*rx*0.15, lean=t*0.3;const topX=bx+lean, topY=baseY-ch*0.95*(0.9+rnd()*0.15);
-    s+=`<path d="M ${q(bx)} ${q(baseY)} Q ${q(bx+lean*0.4)} ${q((baseY+topY)/2)} ${q(topX)} ${q(topY)}" fill="none" stroke="${sc}" stroke-width="1.1" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`;
+    const rootY=baseY+moundH*0.55*dome(t);
+    s+=`<path d="M ${q(bx)} ${q(rootY)} Q ${q(bx+lean*0.4)} ${q((rootY+topY)/2)} ${q(topX)} ${q(topY)}" fill="none" stroke="${sc}" stroke-width="1.1" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`;
     s+=elevDaylilyFlower(topX,topY-c.fr*0.3,c.fr,c.col,c.throat,rnd);}
   return s;
 }
