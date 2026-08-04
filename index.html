@@ -94,6 +94,19 @@ g.vpmark.active .vparm{stroke-width:10}
 .stage{padding:18px 20px;border-right:1px solid var(--line);min-width:0}
 @media(max-width:760px){.stage{border-right:none;border-bottom:1px solid var(--line)}}
 .stage .cap{font-size:12px;color:var(--muted);margin:0 0 10px;display:flex;justify-content:space-between;align-items:center}
+.stage .cap.hint2{margin:10px 0 0;justify-content:flex-start}
+/* ---- Suggested-design picker (issue #24) ---- */
+.stylepick{margin:0 0 4px}
+.stylerow{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.stylechip{font:inherit;font-size:12.5px;font-weight:500;color:#3f4a3a;border:1px solid var(--line2);
+  background:var(--paper2);border-radius:999px;padding:5px 12px;cursor:pointer;white-space:nowrap;
+  transition:border-color .12s,background .12s,color .12s,box-shadow .12s}
+.stylechip:hover{border-color:#9bb38a}
+/* All styles are equal options — no one chip is highlighted. Only two light,
+   non-dominant cues: a thin accent outline on whichever chip is currently shown
+   in the tray, and a small ✓ on whichever is actually applied to the bed. */
+.stylechip.current{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.stylechip.applied::before{content:"✓ ";color:var(--accent);font-weight:700}
 .svgwrap{background:repeating-linear-gradient(0deg,#f4f5ee,#f4f5ee 1px,transparent 1px,transparent 24px),
   repeating-linear-gradient(90deg,#f4f5ee,#f4f5ee 1px,transparent 1px,transparent 24px),#fcfcf8;
   border:1px solid var(--line);border-radius:12px}
@@ -336,14 +349,16 @@ const DEFAULT_VP={
   east_stair:[1115,1500],  // magenta ✕ — south of the bed, looking N
   shower:[1450,1340]       // green ✕ — SE of the bed, looking NW
 };
-let state={layouts:{}, deletedExisting:[], viewpoints:{...DEFAULT_VP}, seededPins:[]}, sel={bed:null, plant:null, editing:null};
+// state.styles: which suggested design (see STYLES) is active per bed — persisted
+// so a returning user keeps the scheme they picked. Absent → 'designer' (RECS).
+let state={layouts:{}, deletedExisting:[], viewpoints:{...DEFAULT_VP}, seededPins:[], styles:{}}, sel={bed:null, plant:null, editing:null};
 let placingVP=null, vpDrag=null;   // viewpoint placement / drag state
 let justPlacedVP=null;             // last ✕ just dropped — lets a double-click on a bed undo it
 
-function save(){ try{ localStorage.setItem('gardenPlan16', JSON.stringify({layouts:state.layouts, deletedExisting:state.deletedExisting, viewpoints:state.viewpoints, seededPins:state.seededPins})); }catch(e){} }
+function save(){ try{ localStorage.setItem('gardenPlan16', JSON.stringify({layouts:state.layouts, deletedExisting:state.deletedExisting, viewpoints:state.viewpoints, seededPins:state.seededPins, styles:state.styles})); }catch(e){} }
 function load(){ try{
     const s=localStorage.getItem('gardenPlan16');
-    if(s){const o=JSON.parse(s); state.layouts=o.layouts||{}; state.deletedExisting=o.deletedExisting||[]; state.viewpoints={...DEFAULT_VP, ...(o.viewpoints||{})}; state.seededPins=o.seededPins||[];}
+    if(s){const o=JSON.parse(s); state.layouts=o.layouts||{}; state.deletedExisting=o.deletedExisting||[]; state.viewpoints={...DEFAULT_VP, ...(o.viewpoints||{})}; state.seededPins=o.seededPins||[]; state.styles=o.styles||{};}
   }catch(e){} }
 
 const bedById=id=>BEDS.find(b=>b.id===id);
@@ -413,8 +428,8 @@ function plantTex(pid){const p=PLANTS[pid];if(!p)return'medium';
 //  • Texture    — like-textured drifts are nudged apart so foliage stays varied.
 //  • Spacing    — a plant is only placed where its circle fits with a soil buffer
 //                 around it, so plants sit evenly apart with clear ground between.
-function defaultLayout(bed){
-  const ids=RECS[bed.id]||[]; if(!ids.length)return [];
+function defaultLayout(bed, ids){
+  ids=ids||RECS[bed.id]||[]; if(!ids.length)return [];
   const polys=polysFt(bed); const grid=layoutGrid(bed); const[w,h]=bedSizeFt(bed);
   const radius=pid=>plantRadius(PLANTS[pid]?PLANTS[pid].spread:1.2);
   // Two separate clearances per grid point:
@@ -509,6 +524,113 @@ function defaultLayout(bed){
     if(!any) break;                                       // bed full → stop
   }
   return out;
+}
+// ---- Suggested planting styles (issue #24) --------------------------------
+// Beyond the hand-curated "Designer's Pick" (the RECS plan), each bed can offer a
+// few alternative SUGGESTED designs to browse and pick between. Every generated
+// style keeps the same baseline — plants native to the region, pollinator-
+// supporting, moderate (not fussy) maintenance, and matched to the bed's light —
+// so the choice is about STRUCTURE / feel, not about breaking those rules:
+//   • meadow   — a loose native grass-and-perennial matrix (naturalistic)
+//   • coastal  — salt/sand/drought Cape Cod natives, low and silvery
+//   • shrub    — native shrub "bones" for four-season structure + perennials
+//   • woodland — a fern/sedge/spring-wildflower understory for shade (this style
+//                relaxes the pollinator rule, since the right shade natives —
+//                ferns and sedges — aren't pollinator plants)
+// stylePalette() returns an ids array shaped exactly like a RECS entry, which
+// defaultLayout() then arranges with the same #17 principles as any other bed.
+const STYLES={
+  designer:{name:"Designer's Pick", blurb:"The hand-curated plan for this bed."},
+  meadow:{name:"Prairie / Meadow", blurb:"A loose native grass-and-perennial matrix — naturalistic and alive with pollinators."},
+  coastal:{name:"Coastal / Seaside", blurb:"Salt-, sand- and drought-tough Cape Cod natives — low, silvery, tolerant of the shore."},
+  shrub:{name:"Shrub-anchored border", blurb:"Native shrub “bones” for four-season structure, with perennials layered in front."},
+  woodland:{name:"Woodland / Shade", blurb:"A layered fern, sedge and spring-wildflower understory for shady ground."}
+};
+// Which light conditions each style suits (a bed is only offered styles that fit
+// its light — and only when the catalog can actually fill that style, see below).
+const STYLE_LIGHTS={meadow:['sun','part sun'], coastal:['sun','part sun'], shrub:['sun','part sun'], woodland:['shade','part sun']};
+const BEDLVL={sun:2,'part sun':1,shade:0};                 // bed light → 0(shade)…2(full sun)
+// Parse a plant's free-text light string into the [min,max] bed-levels it tolerates.
+function lightRange(s){s=(s||'').toLowerCase();
+  if(/sun to part|full sun to part/.test(s))return[1,2];
+  if(/full sun to shade|sun to shade/.test(s))return[0,2];
+  if(/full sun/.test(s))return[2,2];
+  if(/part shade to shade|shade to part|part to full shade/.test(s))return[0,1];
+  if(/part shade/.test(s))return[1,1];
+  if(/shade/.test(s))return[0,0];
+  return[0,2];}
+function lightOK(pid,lvl){const[lo,hi]=lightRange(PLANTS[pid].light);return lo<=lvl&&lvl<=hi;}
+// How close a plant's IDEAL light is to this bed — so "conditions matching the bed"
+// wins ties (a full-sun plant ranks above a mere-tolerator in a full-sun bed).
+function lightFit(pid,lvl){const[lo,hi]=lightRange(PLANTS[pid].light);return -Math.abs((lo+hi)/2-lvl);}
+function plantRole(pid){const c=PLANTS[pid].cat;
+  if(c==='Shrub'||c==='Tree')return'struct';
+  if(c==='Groundcover'||pid==='pennsylvaniasedge')return'ground';
+  return'mid';}
+// Salt/sand/drought-tolerant shoreline natives (no "salt" field in the catalog, so
+// this is the curated Cape Cod coastal set) and the berrying/structural native
+// shrubs that make good four-season "bones" for the shrub-anchored border.
+const COASTAL=new Set(['bayberry','beachplum','bearberry','littlebluestem','seasidegoldenrod','butterflymilkweed','newjerseytea','sweetfern','switchgrass','prairiedropseed','purplelovegrass','wildlupine','blazingstar','beardtongue','mountainmint','blueflagiris']);
+const STRUCTSHRUB=new Set(['inkberry','winterberry','bayberry','sweetpepperbush','chokeberry','highbushblueberry','newjerseytea','sweetfern','beachplum','shadbush','oakleafhydrangea']);
+// The generic "Fern" placeholder is skipped in favour of the specific native ferns.
+const GEN_EXCLUDE=new Set(['fern']);
+// Rank a candidate within its style (higher = more on-theme).
+function styleScore(pid,style){const p=PLANTS[pid];
+  const dr={High:2,Moderate:1,Low:0}[p.drought]||0, poll=p.pollinator?1:0;
+  if(style==='meadow')return (p.cat==='Perennial'?2:0)+2*poll+(p.cat==='Grass'?1:0);
+  if(style==='coastal')return (COASTAL.has(pid)?4:0)+dr+2*poll;
+  if(style==='shrub')return (STRUCTSHRUB.has(pid)?4:0)+dr+2*poll+(p.cat==='Perennial'?1:0);
+  if(style==='woodland')return (p.cat==='Fern'?3:0)+(p.cat==='Groundcover'?2:0)+(p.cat==='Perennial'?1:0)+poll;
+  return 0;}
+// Each style is built as ordered LAYERS (back structure → mid → groundcover skirt).
+// Per layer: a candidate filter, a cap on distinct species, and its share of the
+// bed's plant budget. Species-count is scaled down on small beds so each species
+// still lands as a proper drift (≈3) rather than a lone dot — keeping massing.
+const STYLE_LAYERS={
+  meadow:[[pid=>PLANTS[pid].cat==='Grass',2,.28],[pid=>PLANTS[pid].cat==='Perennial',5,.58],[pid=>plantRole(pid)==='ground',2,.14]],
+  coastal:[[pid=>COASTAL.has(pid)&&plantRole(pid)==='struct',2,.24],[pid=>COASTAL.has(pid)&&plantRole(pid)==='mid',4,.52],[pid=>plantRole(pid)==='ground',2,.24]],
+  shrub:[[pid=>STRUCTSHRUB.has(pid),3,.36],[pid=>PLANTS[pid].cat==='Perennial',4,.44],[pid=>plantRole(pid)==='ground',2,.20]],
+  woodland:[[pid=>PLANTS[pid].cat==='Fern',2,.34],[pid=>PLANTS[pid].cat==='Perennial',3,.42],[pid=>plantRole(pid)==='ground',2,.24]]
+};
+function stylePalette(bed,style){
+  if(style==='designer')return (RECS[bed.id]||[]).slice();
+  const layers=STYLE_LAYERS[style]; if(!layers)return [];
+  const lvl=BEDLVL[bed.light], total=(RECS[bed.id]||[]).length||12, wood=style==='woodland';
+  // baseline every style shares: native + light-appropriate + not deer-ravaged
+  // (a moderate-maintenance guard) + pollinator (relaxed only for woodland).
+  const base=Object.keys(PLANTS).filter(pid=>{const p=PLANTS[pid];
+    return p.naNative && lightOK(pid,lvl) && p.deer!=='Often browsed' && (wood||p.pollinator) && !GEN_EXCLUDE.has(pid);});
+  const out=[], used=new Set();
+  layers.forEach(([filter,nmax,frac])=>{
+    const pool=base.filter(pid=>!used.has(pid)&&filter(pid))
+      .sort((a,b)=>styleScore(b,style)-styleScore(a,style) || lightFit(b,lvl)-lightFit(a,lvl) || plantHt(b)-plantHt(a));
+    if(!pool.length)return;
+    const budget=frac*total, nsp=Math.max(1,Math.min(nmax,Math.round(budget/3)));
+    const picks=pool.slice(0,Math.min(nsp,pool.length)); const per=budget/picks.length;
+    picks.forEach(pid=>{ used.add(pid);
+      const n=isSpecimen(pid)?Math.max(1,Math.round(per*0.5)):oddCount(per);
+      for(let k=0;k<n;k++)out.push(pid); });
+  });
+  return out;
+}
+// The styles offered for a bed: always Designer's Pick, plus any light-appropriate
+// style the catalog can actually fill (≥3 species / ≥5 plants), so shade beds don't
+// advertise a "Coastal" option that would come out empty.
+function stylesForBed(bed){
+  const ks=['designer'];
+  ['meadow','coastal','shrub','woodland'].forEach(k=>{
+    if(!STYLE_LIGHTS[k].includes(bed.light))return;
+    const pal=stylePalette(bed,k);
+    if(new Set(pal).size>=3 && pal.length>=5)ks.push(k);
+  });
+  return ks;
+}
+const activeStyle=bed=>state.styles[bed.id]||'designer';
+// Build a full working layout for a style: the style's suggested plants, laid out
+// by the shared principles, with the bed's stationary EXISTING plants kept on top.
+function styleLayout(bed,style){
+  const keep=(state.layouts[bed.id]||[]).filter(p=>p.exist);
+  return [...keep, ...defaultLayout(bed, stylePalette(bed,style))];
 }
 function ensureLayout(id){if(!state.layouts[id]){state.layouts[id]=defaultLayout(bedById(id));}seedExisting(id);seedPinned(id);save();return state.layouts[id];}
 // Introduce any pinned feature plant (e.g. the East Wing peony) into a bed ONCE,
@@ -618,8 +740,10 @@ function renderDetail(){
     </div>
     <div class="body">
       <div class="stage">
-        <div class="cap"><span>Drag plants to arrange them${bed.multi?' — they move freely between both beds':''}</span><button class="btn ghost" id="resetBed">Reset to suggested</button></div>
+        <div class="cap"><span>Suggested designs — pick one for this bed</span><button class="btn ghost" id="resetBed">Reset to suggestion</button></div>
+        <div class="stylepick" id="stylepick"></div>
         <div class="svgwrap"><svg class="schem" id="schem"></svg></div>
+        <div class="cap hint2"><span>Drag plants to arrange them${bed.multi?' — they move freely between both beds':''}</span></div>
         <div class="elevwrap">
           <div class="cap"><span>Elevation — an angled view at maturity, tallest behind. Hover a plant for its name.</span><span class="caprt"><button class="vpbtn" id="setvp" type="button">📍 Set viewpoint</button><button class="vpbtn clr" id="clrvp" type="button" style="display:none">Clear</button><span class="scalenote" id="elevscale"></span></span></div>
           <div id="elevviews"></div>
@@ -640,7 +764,10 @@ function renderDetail(){
     </div>`;
   det.appendChild(panel);
   panel.querySelector('.close').onclick=closeDetail;
-  panel.querySelector('#resetBed').onclick=()=>{const keep=state.layouts[bed.id].filter(p=>p.exist);state.layouts[bed.id]=[...keep,...defaultLayout(bed)];sel.plant=null;sel.editing=null;save();renderDetail();};
+  // Reset re-generates the bed's CURRENTLY ACTIVE suggestion (Designer's Pick or a
+  // chosen style), discarding hand-edits but keeping stationary existing plants.
+  panel.querySelector('#resetBed').onclick=()=>{state.layouts[bed.id]=styleLayout(bed,activeStyle(bed));sel.plant=null;sel.editing=null;save();renderDetail();};
+  renderStylePicker(bed);
   const addpanel=panel.querySelector('#addpanel'), addtrigger=panel.querySelector('#addtrigger');
   let addFilled=false;
   // Fill the grid lazily on first open: fillPalette fits each icon via getBBox, which
@@ -660,6 +787,35 @@ function renderDetail(){
   panel.querySelector('#setvp').onclick=()=>{ placingVP = placingVP===bed.id ? null : bed.id; document.querySelector('.plan').classList.toggle('placing', !!placingVP); if(placingVP) document.querySelector('.plan').scrollIntoView({behavior:'smooth',block:'start'}); renderViewpoints(); updateVpBtn(bed); };
   panel.querySelector('#clrvp').onclick=()=>{ delete state.viewpoints[bed.id]; placingVP=null; save(); document.querySelector('.plan').classList.remove('placing'); renderViewpoints(); renderElev(); updateVpBtn(bed); };
   renderSchem(); renderElev(); renderList(); updateVpBtn(bed);
+}
+
+// ---- Suggested-design picker (issue #24) ----------------------------------
+// A row of chips under the plan — every offered style is an equal option. It works
+// like a selector: clicking a style IS choosing it — that design is generated and
+// SAVED for the bed immediately (the chip shows a ✓). Clicking the already-selected
+// style does nothing, so it never wipes hand-edits; "Reset to suggestion" is the
+// explicit way to regenerate the current style fresh.
+function renderStylePicker(bed){
+  const host=document.getElementById('stylepick'); if(!host)return;
+  const keys=stylesForBed(bed), active=activeStyle(bed);
+  host.innerHTML='';
+  const row=document.createElement('div'); row.className='stylerow';
+  keys.forEach(k=>{
+    const b=document.createElement('button'); b.type='button';
+    b.className='stylechip'+(k===active?' current applied':'');   // ✓ + thin outline on the saved style
+    b.textContent=STYLES[k].name;
+    b.title=STYLES[k].blurb+(k===active?' · saved for this bed':'');
+    b.onclick=()=>{ if(k!==active) applyStyle(bed,k); };
+    row.appendChild(b);
+  });
+  host.appendChild(row);
+}
+// Choosing a style generates its design and saves it as the bed's layout (keeping
+// stationary existing plants). This replaces the previously-shown plants — expected,
+// since the user deliberately picked a different design.
+function applyStyle(bed,style){
+  state.layouts[bed.id]=styleLayout(bed,style); state.styles[bed.id]=style;
+  sel.plant=null; sel.editing=null; save(); renderDetail();
 }
 
 // ---- Per-bed rotation for the schematic ("circle bed") view ----
