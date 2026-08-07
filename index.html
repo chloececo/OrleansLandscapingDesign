@@ -234,8 +234,10 @@ footer{color:var(--muted);font-size:12px;margin-top:22px;text-align:center}
 .elevwrap .scalenote{font-variant-numeric:tabular-nums;flex:none}
 .elevblock + .elevblock{margin-top:14px}
 .elevlab{font-size:11.5px;font-weight:600;color:var(--muted);margin:0 0 5px}
-svg.elev{display:block;width:100%;height:auto;border-radius:10px;
+svg.elev{display:block;width:100%;height:auto;border-radius:10px;cursor:grab;touch-action:none;
   background:linear-gradient(180deg,#eaf2f4 0%,#f0f4ea 52%,#f6f3e6 100%)}
+body.orbiting svg.elev,body.orbiting{cursor:grabbing}
+#elevviews:focus-visible{outline:2px solid #9bb38a;outline-offset:3px;border-radius:12px}
 .elev g.eltok{cursor:help;transition:filter .12s}
 .elev g.eltok:hover{filter:brightness(1.05) drop-shadow(0 1px 2px rgba(0,0,0,.18))}
 .eltip{position:absolute;left:0;top:0;pointer-events:none;z-index:6;opacity:0;transition:opacity .12s;
@@ -387,14 +389,14 @@ const DEFAULT_VP={
 };
 // state.styles: which suggested design (see STYLES) is active per bed — persisted
 // so a returning user keeps the scheme they picked. Absent → 'designer' (RECS).
-let state={layouts:{}, deletedExisting:[], viewpoints:{...DEFAULT_VP}, seededPins:[], styles:{}}, sel={bed:null, plant:null, editing:null};
+let state={layouts:{}, deletedExisting:[], viewpoints:{...DEFAULT_VP}, seededPins:[], styles:{}, tilts:{}}, sel={bed:null, plant:null, editing:null};
 let placingVP=null, vpDrag=null;   // viewpoint placement / drag state
 let justPlacedVP=null;             // last ✕ just dropped — lets a double-click on a bed undo it
 
-function save(){ try{ localStorage.setItem('gardenPlan16', JSON.stringify({layouts:state.layouts, deletedExisting:state.deletedExisting, viewpoints:state.viewpoints, seededPins:state.seededPins, styles:state.styles})); }catch(e){} }
+function save(){ try{ localStorage.setItem('gardenPlan16', JSON.stringify({layouts:state.layouts, deletedExisting:state.deletedExisting, viewpoints:state.viewpoints, seededPins:state.seededPins, styles:state.styles, tilts:state.tilts})); }catch(e){} }
 function load(){ try{
     const s=localStorage.getItem('gardenPlan16');
-    if(s){const o=JSON.parse(s); state.layouts=o.layouts||{}; state.deletedExisting=o.deletedExisting||[]; state.viewpoints={...DEFAULT_VP, ...(o.viewpoints||{})}; state.seededPins=o.seededPins||[]; state.styles=o.styles||{};}
+    if(s){const o=JSON.parse(s); state.layouts=o.layouts||{}; state.deletedExisting=o.deletedExisting||[]; state.viewpoints={...DEFAULT_VP, ...(o.viewpoints||{})}; state.seededPins=o.seededPins||[]; state.styles=o.styles||{}; state.tilts=o.tilts||{};}
   }catch(e){} }
 
 const bedById=id=>BEDS.find(b=>b.id===id);
@@ -781,7 +783,7 @@ function renderDetail(){
         <div class="svgwrap"><svg class="schem" id="schem"></svg></div>
         <div class="cap hint2"><span>Drag plants to arrange them${bed.multi?' — they move freely between both beds':''}</span></div>
         <div class="elevwrap">
-          <div class="cap"><span>Elevation — an angled view at maturity, tallest behind. Hover a plant for its name.</span><span class="caprt"><button class="vpbtn" id="setvp" type="button">📍 Set viewpoint</button><button class="vpbtn clr" id="clrvp" type="button" style="display:none">Clear</button><span class="scalenote" id="elevscale"></span></span></div>
+          <div class="cap"><span>Elevation — an angled view at maturity, tallest behind. Drag to spin around the bed and tilt up or down; hover a plant for its name.</span><span class="caprt"><button class="vpbtn" id="setvp" type="button">📍 Set viewpoint</button><button class="vpbtn clr" id="clrvp" type="button" style="display:none">Clear</button><span class="scalenote" id="elevscale"></span></span></div>
           <div id="elevviews"></div>
           <div class="eltip" id="eltip"></div>
         </div>
@@ -821,7 +823,17 @@ function renderDetail(){
   addpanel.addEventListener('keydown',e=>{ if(e.key==='Escape'){ setAddOpen(false); addtrigger.focus(); } });
   setAddOpen(palOpen);   // restore open state across the re-render an add triggers
   panel.querySelector('#setvp').onclick=()=>{ placingVP = placingVP===bed.id ? null : bed.id; document.querySelector('.plan').classList.toggle('placing', !!placingVP); if(placingVP) document.querySelector('.plan').scrollIntoView({behavior:'smooth',block:'start'}); renderViewpoints(); updateVpBtn(bed); };
-  panel.querySelector('#clrvp').onclick=()=>{ delete state.viewpoints[bed.id]; placingVP=null; save(); document.querySelector('.plan').classList.remove('placing'); renderViewpoints(); renderElev(); updateVpBtn(bed); };
+  panel.querySelector('#clrvp').onclick=()=>{ delete state.viewpoints[bed.id]; delete state.tilts[bed.id]; placingVP=null; save(); document.querySelector('.plan').classList.remove('placing'); renderViewpoints(); renderElev(); updateVpBtn(bed); };
+  // Spin the viewpoint around the bed directly from the elevation (issue #38)
+  const elevhost=panel.querySelector('#elevviews');
+  elevhost.tabIndex=0; elevhost.setAttribute('role','group');
+  elevhost.setAttribute('aria-label','Elevation view — arrow keys spin the viewpoint around the bed (left/right) and tilt it up/down');
+  elevhost.addEventListener('keydown',e=>{
+    if(e.key==='ArrowLeft'){ e.preventDefault(); spinElev(bed,-1); }
+    else if(e.key==='ArrowRight'){ e.preventDefault(); spinElev(bed,1); }
+    else if(e.key==='ArrowUp'){ e.preventDefault(); tiltElev(bed,1); }
+    else if(e.key==='ArrowDown'){ e.preventDefault(); tiltElev(bed,-1); }
+  });
   renderSchem(); renderElev(); renderList(); updateVpBtn(bed);
 }
 
@@ -964,6 +976,7 @@ function renderElev(){
     const svg=document.createElementNS(SVGNS,'svg'); svg.setAttribute('class','elev');
     wrap.appendChild(svg); block.appendChild(wrap); host.appendChild(block);
     drawElevation(svg,bed,lay,view,topH);
+    svg.addEventListener('pointerdown',e=>elevStartOrbit(e,bed));   // drag the scene to orbit the viewpoint (issue #38)
   });
 }
 // Which plan axis the elevation runs along, given where the ✕ viewpoint sits
@@ -2419,14 +2432,51 @@ function elevPerenMarkup(it,cx,baseY,rx,ch){
 }
 function drawElevation(svg,bed,lay,view,topH){
   const axis=view.axis;
-  const {hspan}=elevDims(bed,axis);
+  const b=bedBox(bed), vp=state.viewpoints[bed.id];
+  // depth comes from each plant's ACTUAL position in the bed (not its height) so a
+  // tall plant sitting in the middle reads in the middle, not shoved to the back.
+  // With a ✕ viewpoint we project onto the line of sight for depth AND onto the axis
+  // perpendicular to it for the horizontal spread — both are CONTINUOUS in the gaze
+  // direction, so orbiting the viewpoint (#38) sweeps smoothly instead of snapping
+  // between a spread-by-x and a spread-by-y view at the 45° diagonals. Without a ✕ we
+  // fall back to the in-bed axis running away from the viewer (perpendicular to spread).
+  let gx=0,gy=0; if(vp){const c=bedCenterPx(bed); gx=c[0]-vp[0]; gy=c[1]-vp[1]; const gl=Math.hypot(gx,gy)||1; gx/=gl; gy/=gl;}
+  const hxu=-gy, hyu=gx;                          // screen-right unit vector (⊥ the gaze), in plan px
+  const depthRaw=(xf,yf)=> vp ? ((b.x0+xf*PPF)-vp[0])*gx + ((b.y0+yf*PPF)-vp[1])*gy : (axis==='right'?xf:yf);
+  const hcRaw=(xf,yf)=> (((b.x0+xf*PPF)-vp[0])*hxu + ((b.y0+yf*PPF)-vp[1])*hyu)/PPF;   // horizontal spread, feet
+  let hspan, hc0=0;
+  if(vp){ const hv=polysFt(bed).flat().map(p=>hcRaw(p[0],p[1])); hc0=Math.min(...hv); hspan=Math.max(0.5,Math.max(...hv)-hc0); }
+  else { hspan=elevDims(bed,axis).hspan; }
+  // where a plan point sits along the horizontal spread of the elevation
+  const hcOf=(xf,yf)=>{let hc = vp ? hcRaw(xf,yf)-hc0 : (axis==='right'?yf:xf); if(!vp&&view.flip)hc=hspan-hc; return Math.max(0,Math.min(hspan,hc));};
   // Shallower depth projection than a true perspective: a smaller lift + shear keeps
   // depth-separated plants stacked over each other (canopies interleave, filling the
   // gaps) instead of sliding apart into bare ground/sky the way a deep rake does.  #21
-  const RISE=Math.min(topH*0.34, hspan*0.3);     // how far the back of the bed lifts
+  // Pitch (#38) tilts the camera up/down by scaling that lift: 0 → nearly head-on side
+  // elevation, 0.5 → the default rake, 1 → steeper, more bird's-eye (ground opens up).
+  const pitch=bedTilt(bed);
+  const RISE=Math.min(topH*0.34, hspan*0.3)*(0.2+pitch*1.6);   // how far the back of the bed lifts
   const SKEW=hspan*0.045;                         // and how far it shears to the right
-  const padX=0.6, VBH=topH+RISE+1.0, groundF=VBH-0.5;
-  svg.setAttribute('viewBox',`${-padX} 0 ${hspan+SKEW+2*padX} ${VBH}`);
+  const padX=0.6;
+  // Framing. With a ✕ viewpoint the box is sized to the bed's ROTATION-INVARIANT extent
+  // (its footprint diameter) and its steepest possible rake, and the current projection is
+  // CENTERED inside it. So spinning/tilting turns the bed in place within one steady box —
+  // constant zoom, and nothing slides out of view at any angle (#38). The ground baseline
+  // is pinned (groundF from the max rake) so tilt just changes the lift, not the framing.
+  // Without a ✕ we tight-fit the single fixed view at the end of the function.
+  let VBH, groundF;
+  if(vp){
+    const pf=polysFt(bed).flat(); let diam=0.5;
+    for(let i=0;i<pf.length;i++)for(let j=i+1;j<pf.length;j++){const d=Math.hypot(pf[i][0]-pf[j][0],pf[i][1]-pf[j][1]); if(d>diam)diam=d;}
+    const maxCW=Math.max(0,...lay.map(it=>showW(it)));          // widest canopy → keep edge plants off the frame
+    const riseMax=Math.min(topH*0.34, diam*0.3)*1.8;           // rake at full bird's-eye
+    VBH=topH+riseMax+1.0; groundF=VBH-0.5;
+    const frameW=diam*1.045+maxCW+2*padX, cx=(hspan+SKEW)/2;   // frame width fixed; cx = centre of current view
+    svg.setAttribute('viewBox',`${(cx-frameW/2).toFixed(2)} 0 ${frameW.toFixed(2)} ${VBH.toFixed(2)}`);
+  }else{
+    VBH=topH+RISE+1.0; groundF=VBH-0.5;
+    svg.setAttribute('viewBox',`${-padX} 0 ${hspan+SKEW+2*padX} ${VBH}`);
+  }
   svg.style.maxHeight='460px';
   // warm soil gradient for the receding ground plane
   svg.innerHTML='<defs>'+
@@ -2435,16 +2485,6 @@ function drawElevation(svg,bed,lay,view,topH){
       '<stop offset="1" stop-color="#dccfb0"/>'+
     '</linearGradient>'+
   '</defs>';
-  // depth comes from each plant's ACTUAL position in the bed (not its height) so a
-  // tall plant sitting in the middle reads in the middle, not shoved to the back.
-  // With a ✕ viewpoint we project onto the line of sight; otherwise we use the
-  // in-bed axis running away from the viewer (perpendicular to the spread).
-  const b=bedBox(bed), vp=state.viewpoints[bed.id];
-  let gx=0,gy=0; if(vp){const c=bedCenterPx(bed); gx=c[0]-vp[0]; gy=c[1]-vp[1]; const gl=Math.hypot(gx,gy)||1; gx/=gl; gy/=gl;}
-  // distance into the bed (away from the viewer) for a plan point in bed-local feet
-  const depthRaw=(xf,yf)=> vp ? ((b.x0+xf*PPF)-vp[0])*gx + ((b.y0+yf*PPF)-vp[1])*gy : (axis==='right'?xf:yf);
-  // where that point sits along the horizontal spread of the elevation
-  const hcOf=(xf,yf)=>{let hc=axis==='right'?yf:xf; if(view.flip)hc=hspan-hc; return Math.max(0,Math.min(hspan,hc));};
 
   // receding ground plane = the bed's own footprint, projected back-and-up
   const polys=polysFt(bed);
@@ -2460,14 +2500,17 @@ function drawElevation(svg,bed,lay,view,topH){
   const elevInvert=(px,py)=>{
     let dN=RISE>1e-6?(groundF-py)/RISE:0.5; dN=Math.max(0,Math.min(1,dN));
     let hc=px-dN*SKEW; hc=Math.max(0,Math.min(hspan,hc));
-    const spread=view.flip?hspan-hc:hc;
     const haveDepth=gspan>1e-6, D=gmin+dN*gspan;
     let xf=null,yf=null;
     if(vp){
-      const K=(b.x0-vp[0])*gx+(b.y0-vp[1])*gy;
-      if(axis==='front'){xf=spread; if(haveDepth&&Math.abs(gy)>1e-6) yf=(D-K-PPF*gx*xf)/(PPF*gy);}
-      else{yf=spread; if(haveDepth&&Math.abs(gx)>1e-6) xf=(D-K-PPF*gy*yf)/(PPF*gx);}
+      // Invert the two perpendicular projections: depth D along the gaze (gx,gy) and the
+      // horizontal H along the screen-right axis (hxu,hyu). That 2×2 matrix is a pure
+      // rotation (determinant 1), so the solve is exact and never singular.
+      const H=(hc+hc0)*PPF;                            // horizontal spread back to plan px
+      const u=D*gx - H*gy, w=D*gy + H*gx;              // point relative to the viewpoint, px
+      xf=(u+vp[0]-b.x0)/PPF; yf=(w+vp[1]-b.y0)/PPF;
     }else{
+      const spread=view.flip?hspan-hc:hc;
       if(axis==='front'){xf=spread; if(haveDepth) yf=D;}
       else{yf=spread; if(haveDepth) xf=D;}
     }
@@ -2585,13 +2628,75 @@ function drawElevation(svg,bed,lay,view,topH){
       }
       svg.appendChild(g);
     });
-  // Tight-fit the viewBox to the projected ground + plants so the scene fills the
-  // card edge-to-edge instead of floating in a fixed band of empty headroom.
-  const bb=svg.getBBox(), mx=0.5, my=0.4;
-  svg.setAttribute('viewBox',`${bb.x-mx} ${bb.y-my} ${bb.width+2*mx} ${bb.height+2*my}`);
+  // Tight-fit the viewBox to the projected ground + plants so a single fixed view fills the
+  // card edge-to-edge. Only for the no-✕ views: a ✕ view uses the stable, centered frame set
+  // above so it stays steady while you spin/tilt instead of the box snapping each frame (#38).
+  if(!vp){
+    const bb=svg.getBBox(), mx=0.5, my=0.4;
+    svg.setAttribute('viewBox',`${bb.x-mx} ${bb.y-my} ${bb.width+2*mx} ${bb.height+2*my}`);
+  }
 }
 // ---- Viewpoint (✕) markers on the plan ----
 function bedCenterPx(bed){const b=bedBox(bed);return [(b.x0+b.x1)/2,(b.y0+b.y1)/2];}
+// ---- Orbit + tilt the viewpoint from the elevation view (issue #38) ----
+// Spin: the ✕ viewpoint is a point on a circle around the bed centroid — dragging
+// left/right (or ◀▶ / ← →) sweeps its angle, radius preserved so the camera keeps its
+// distance. Tilt: a per-bed pitch (state.tilts, 0 head-on … 0.5 default … 1 bird's-eye)
+// scales the elevation's vertical rake — dragging up/down (or ▲▼ / ↑ ↓) changes it.
+// Both reuse the whole ✕→projection path in drawElevation.
+const ORBIT_STEP=Math.PI/12;                                   // 15° per arrow press/click
+const TILT_STEP=0.12;                                          // pitch change per ▲▼ press
+function bedViewRadius(bed){const b=bedBox(bed);return Math.max(60,Math.hypot(b.x1-b.x0,b.y1-b.y0)*0.6);}
+function vpAngle(bed){const vp=state.viewpoints[bed.id];if(!vp)return null;const c=bedCenterPx(bed);return Math.atan2(vp[1]-c[1],vp[0]-c[0]);}
+function curAngle(bed){const a=vpAngle(bed);return a==null?Math.PI/2:a;}   // default: viewer south, looking N
+function bedTilt(bed){const t=state.tilts&&state.tilts[bed.id];return t==null?0.5:t;}
+function setTilt(bed,p){state.tilts[bed.id]=Math.max(0,Math.min(1,p));}
+function setVpAngle(bed,ang){
+  const c=bedCenterPx(bed), vp=state.viewpoints[bed.id];
+  const R=vp?(Math.hypot(vp[0]-c[0],vp[1]-c[1])||bedViewRadius(bed)):bedViewRadius(bed);
+  state.viewpoints[bed.id]=[Math.round(c[0]+R*Math.cos(ang)),Math.round(c[1]+R*Math.sin(ang))];
+}
+function applyView(bed,commit){ if(commit)save(); renderElev(); renderViewpoints(); updateVpBtn(bed); }
+function spinElev(bed,dir){ setVpAngle(bed,curAngle(bed)+dir*ORBIT_STEP); applyView(bed,true); document.getElementById('elevviews').focus(); }
+function tiltElev(bed,dir){ setTilt(bed,bedTilt(bed)+dir*TILT_STEP); applyView(bed,true); document.getElementById('elevviews').focus(); }
+let elevOrbit=null;
+function elevStartOrbit(e,bed){
+  if(e.target.closest('.eltok'))return;                       // a plant silhouette drag wins
+  e.preventDefault();
+  const r=e.currentTarget.getBoundingClientRect();
+  elevOrbit={bed,startX:e.clientX,startY:e.clientY,lastX:e.clientX,lastY:e.clientY,
+    startAng:curAngle(bed),startPitch:bedTilt(bed),hadVp:!!state.viewpoints[bed.id],
+    k:Math.PI/Math.max(260,r.width),kV:1/Math.max(240,r.height),moved:false,raf:0};
+  window.addEventListener('pointermove',elevOnOrbit);
+  window.addEventListener('pointerup',elevEndOrbit);
+  window.addEventListener('pointercancel',elevEndOrbit);
+  document.body.classList.add('orbiting');
+}
+function elevOnOrbit(e){
+  if(!elevOrbit)return;
+  elevOrbit.lastX=e.clientX; elevOrbit.lastY=e.clientY;
+  if(Math.abs(e.clientX-elevOrbit.startX)>2||Math.abs(e.clientY-elevOrbit.startY)>2)elevOrbit.moved=true;
+  if(elevOrbit.raf)return;                                    // coalesce moves to one render per frame
+  elevOrbit.raf=requestAnimationFrame(()=>{
+    if(!elevOrbit)return; elevOrbit.raf=0;
+    const o=elevOrbit, dx=o.lastX-o.startX, dy=o.lastY-o.startY;
+    // horizontal → spin; only create/move the ✕ if there's real horizontal travel, so a
+    // purely vertical (tilt-only) drag doesn't snap the azimuth onto a default viewpoint.
+    if(o.hadVp||Math.abs(dx)>4) setVpAngle(o.bed,o.startAng+dx*o.k);
+    setTilt(o.bed,o.startPitch+dy*o.kV);                      // drag down → higher pitch (more bird's-eye)
+    applyView(o.bed,false);                                   // drawElevation supplies the stable, centered frame
+  });
+}
+function elevEndOrbit(){
+  if(!elevOrbit)return;
+  if(elevOrbit.raf)cancelAnimationFrame(elevOrbit.raf);
+  const moved=elevOrbit.moved; elevOrbit=null;
+  window.removeEventListener('pointermove',elevOnOrbit);
+  window.removeEventListener('pointerup',elevEndOrbit);
+  window.removeEventListener('pointercancel',elevEndOrbit);
+  document.body.classList.remove('orbiting');
+  if(moved) save();        // keep the frozen frame as-is — no re-fit so the box doesn't jump on release
+}
 function updateVpBtn(bed){
   const setvp=document.getElementById('setvp'), clrvp=document.getElementById('clrvp');
   if(!setvp)return;
