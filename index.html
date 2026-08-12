@@ -124,6 +124,18 @@ header.top .topacts{margin-left:auto;align-self:center;display:flex;gap:8px;flex
 .rp-tbl td.pn b{font-weight:600}
 .rp-tbl td.pn i{color:var(--muted);font-size:11.5px;margin-left:6px}
 .rp-tag{font-size:11px;color:var(--muted);font-style:italic}
+.rp .rp-bedblurb{font-size:12.5px;color:var(--ink);margin:0 0 8px;max-width:70ch;line-height:1.45}
+.rp .rp-bedtip{font-size:12px;color:var(--ink);margin:0 0 9px;max-width:72ch;line-height:1.5;background:#f3f6ee;border-left:3px solid #cbe4d3;border-radius:0 6px 6px 0;padding:7px 10px}
+.rp .rp-bedtip b{color:#2f6b43}
+.rp-map{margin:2px 0 11px;border:1px solid var(--line);border-radius:9px;padding:10px 10px 6px;background:#fcfdfb}
+.rp-map .rp-mapsvg{display:block;width:100%;max-height:250px;height:auto}
+.rp-map .rp-mapcap{margin:6px 0 0;font-size:10.5px;color:var(--muted);text-align:center;font-style:italic}
+.rp-key{display:inline-block;min-width:1.7em;text-align:center;font-size:9.5px;font-weight:700;color:#fff;background:#6f8f5c;border-radius:5px;padding:1px 4px;letter-spacing:.02em}
+.rp-tbl td.q .rp-keyq{color:var(--ink);font-weight:600;margin-left:5px}
+.rp-tbl td.rp-tip{font-size:12px;color:var(--ink);line-height:1.4;white-space:normal;min-width:15em}
+.rp-chip{display:inline-block;font-size:10.5px;font-weight:600;letter-spacing:.02em;color:#2f6b43;background:#eaf4ec;border:1px solid #cbe4d3;border-radius:999px;padding:1px 7px;white-space:nowrap}
+.rp-tips .rp-tiplist{margin:0;padding-left:1.1em;font-size:13px;line-height:1.5}
+.rp-tips .rp-tiplist li{margin:0 0 7px}
 .rp-empty{color:var(--muted);font-size:13px;font-style:italic}
 .reportsheet{display:none}
 
@@ -134,7 +146,7 @@ header.top .topacts{margin-left:auto;align-self:center;display:flex;gap:8px;flex
   #reportview .modal{box-shadow:none;border:none;max-height:none;width:auto;padding:0}
   #reportview .reportbody{max-height:none;overflow:visible;border:none;padding:0}
   .rp section{page-break-inside:auto}
-  .rp .rp-bed,.rp-tbl tr{page-break-inside:avoid}
+  .rp .rp-bed,.rp-tbl tr,.rp-tiplist li,.rp-map{page-break-inside:avoid}
 }
 
 /* transient toast */
@@ -499,8 +511,7 @@ const BEDS=[{"id": "front_yard", "name": "Entry Garden Island", "color": "#87dad
 //   x,y = feet from the bed's top-left corner (omit to auto-place)
 //   r   = optional display size (diameter) in ft, for big things like trees
 const EXISTING={
-  "front_yard":[{"eid":"oak","pid":"oak","r":13,"x":6.2,"y":16.2}],
-  "kitchen":[{"eid":"butterflybush","pid":"butterflybush","r":4,"x":8.2,"y":19.6}]
+  "front_yard":[{"eid":"oak","pid":"oak","r":7,"x":6.2,"y":16.2}]
 };
 // Feature plants pinned to a bed's centre by defaultLayout — they get flowed
 // around the pin rather than auto-tiered, so they land reliably in the middle.
@@ -716,7 +727,7 @@ function unitCounts(layout){
 // Units for a set of live beds (or beds from a supplied `layouts` map, e.g. a saved plan).
 function bedUnits(bedIds, layouts){
   const src=layouts||state.layouts;
-  return bedIds.map(bedById).filter(Boolean).map(b=>({name:b.name, area:b.area_sqft, light:b.light, layout:src[b.id]||[]}));
+  return bedIds.map(bedById).filter(Boolean).map(b=>({name:b.name, area:b.area_sqft, light:b.light, blurb:b.blurb, bed:b, layout:src[b.id]||[]}));
 }
 function reportData(units){
   const buy={}, all={}, perUnit=[];   // buy: pid->qty ; all: pid->{n,ex}
@@ -731,47 +742,195 @@ function reportData(units){
   return {units:perUnit, buy, all};
 }
 function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+// Short, plant-specific planting / growing tips for the report's planting guide.
+// One concise line per species; anything not listed falls back to growTip()'s
+// synthesized note built from the catalog attributes.
+const GROWTIPS={
+  boxwood:"Shear in early summer; shallow-rooted—mulch, don't dig alongside.",
+  arborvitae:"Water deeply the first year. Deer favorite—protect while young.",
+  holly:"Needs a male nearby to set berries; evergreen, shear in spring.",
+  hydrangea:"Morning sun, afternoon shade; keep evenly moist.",
+  rhododendron:"Acidic, well-drained soil; shade the roots, don't bury the crown.",
+  spirea:"Trim right after bloom to reshape; tough and forgiving.",
+  viburnum:"Plant two for cross-pollination and fall berries; adaptable.",
+  sweetpepperbush:"Loves damp soil; fragrant late-summer bloom for pollinators.",
+  winterberry:"Needs a male pollinator; takes wet soil; berries feed birds.",
+  inkberry:"Evergreen screen; shear to shape in spring; tolerates wet ground.",
+  bayberry:"Salt- and wind-tough; fixes nitrogen; plant two for berries.",
+  highbushblueberry:"Acidic soil, two varieties for fruit; net from the birds.",
+  beachplum:"Sharp drainage, full sun; sandy/salt tough; fruit in fall.",
+  sweetfern:"Poor sandy soil; site permanently—resents transplanting. Aromatic.",
+  chokeberry:"Takes wet or dry; brilliant fall color; berries for birds.",
+  shadbush:"Multi-stem—give it room; the June berries draw songbirds.",
+  newjerseytea:"Deep taproot—plant where it stays; fixes nitrogen.",
+  oakleafhydrangea:"Part shade, rich soil; blooms on old wood—prune after flowering.",
+  butterflybush:"Deadhead to prolong bloom; cut back hard in spring. Non-native—can self-seed.",
+  lilac:"Full sun for bloom; prune right after flowering; give it air flow.",
+  lavender:"Sharp drainage, lean soil; trim after bloom, never into old wood.",
+  salvia:"Shear spent spikes for a second flush; wants well-drained soil.",
+  catnip:"Cut back after bloom to refresh; drought-tough (and cats adore it).",
+  coneflower:"Leave seedheads for finches; divide clumps every 3–4 years.",
+  daylily:"Nearly foolproof; divide when crowded; snap off spent scapes.",
+  rudbeckia:"Deadhead for more bloom, then leave late seedheads for birds.",
+  hosta:"Shade; water in dry spells; slug- and deer-prone—protect.",
+  heuchera:"Part shade; mulch and re-firm if frost heaves it in winter.",
+  astilbe:"Moist, rich soil—never let it dry out; feed in spring.",
+  sedum:"Lean, dry, sunny; don't overwater; leave heads for winter.",
+  butterflymilkweed:"Deep taproot—don't move it; monarch host; slow to wake in spring.",
+  swampmilkweed:"Wants moist soil; monarch host; leave stems over winter.",
+  newenglandaster:"Pinch back by July for bushier bloom; divide every few years.",
+  wildbergamot:"Give it air flow to dodge mildew; cut back after bloom.",
+  wildlupine:"Direct-sow—resents transplanting; lean sandy soil; fixes nitrogen.",
+  seasidegoldenrod:"Salt/sand tough; doesn't cause hay fever; leave for late pollinators.",
+  anisegoldenrod:"Part shade ok; anise-scented leaves; a clumper, not a runner.",
+  blazingstar:"Set corms pointed-up in sharp drainage; bees work the spikes.",
+  beardtongue:"Well-drained soil; short-lived—let it self-sow to persist.",
+  mountainmint:"A top pollinator plant; spreads—give room or divide.",
+  baptisia:"Deep taproot—site permanently; slow to start, then long-lived.",
+  goldenalexanders:"Early nectar; takes moist soil; swallowtail host plant.",
+  oxeyesunflower:"Cut back by half in June to curb flop; long bloomer.",
+  blueflagiris:"Wet soil or pond edge; divide the rhizomes in late summer.",
+  wildcolumbine:"Well-drained part shade; short-lived but reseeds happily.",
+  wildgeranium:"Woodland shade, steady moisture; a gentle spreader.",
+  foamflower:"Moist shade; mulch; airy spring bloom for the woodland edge.",
+  woodlandphlox:"Part shade, moist soil; shear after bloom to tidy.",
+  cardinalflower:"Keep constantly moist—never dry; hummingbird magnet; let it self-sow.",
+  whitewoodaster:"Tough in dry shade; late bloom under trees; spreads gently.",
+  goldengroundsel:"Moist ground; semi-evergreen carpet; early yellow bloom.",
+  orangedaylily:"Vigorous—can run; nearly indestructible. Non-native.",
+  peony:"Set eyes shallow (1–2 in.), full sun; support heavy blooms; don't move.",
+  fountaingrass:"Shear low in late winter; full sun; drought-tough.",
+  reedgrass:"Early, upright; cut to the ground in late winter.",
+  liriope:"Mow or shear in early spring before new growth; edging groundcover.",
+  littlebluestem:"Lean soil, full sun; blue in summer, russet in fall; cut back late winter.",
+  switchgrass:"Upright screen; cut to the ground in late winter; very tough.",
+  pennsylvaniasedge:"Shade lawn substitute—no mowing; spreads into a soft carpet.",
+  prairiedropseed:"Slow but long-lived fine fountain; fragrant bloom.",
+  purplelovegrass:"Sandy, dry soil; an airy purple haze in late summer.",
+  fern:"Moist shade; mulch; shelter from wind and midday sun.",
+  cinnamonfern:"Wet to moist shade; won't tolerate drying out.",
+  christmasfern:"Evergreen; takes drier shade than most ferns.",
+  ostrichfern:"Moist, rich shade; spreads by runners and gets tall.",
+  thymeground:"Sharp drainage, full sun; walkable; shear after bloom.",
+  vinca:"Shade-tolerant carpet; can spread—edge it in. Non-native.",
+  bearberry:"Sharp drainage, lean sandy soil; slow to start—don't overwater.",
+  wildstrawberry:"Sun to part shade; runs to fill; fruit for wildlife.",
+  bluetviolet:"Self-sows freely; fritillary host; let it wander or edit out.",
+  teaberry:"Acidic shade; slow evergreen mat; minty red winter berries.",
+  rosemary:"Full sun, sharp drainage; shelter or overwinter indoors here.",
+  thyme:"Lean, dry, sunny; trim after bloom; takes light foot traffic.",
+  sage:"Well-drained soil; prune lightly in spring, not into bare wood.",
+  basil:"Warm soil only; pinch flowers off to keep leaves coming.",
+  parsley:"Steady moisture; biennial—harvest year one; swallowtail host.",
+  oregano:"Lean, dry soil; shear after bloom; spreads—edit as needed.",
+  mint:"Contain it—runs hard; keep moist; shear to refresh.",
+  chives:"Full sun; snip often; divide clumps every few years.",
+  dill:"Direct-sow—resents transplant; swallowtail host; let some self-sow.",
+  trumpethoneysuckle:"Give sturdy support; well-behaved (not the invasive kind); hummingbird favorite.",
+  virginiacreeper:"Vigorous—give room and support; fiery fall red; berries for birds.",
+  oak:"Plant young for a strong taproot; a keystone for wildlife; water first years."
+};
+function growTip(pid){
+  if(GROWTIPS[pid]) return GROWTIPS[pid];
+  const p=PLANTS[pid]||{}, parts=[];
+  const base={Tree:'Plant young and water deeply the first years.',Shrub:'Plant in spring or fall; water until established.',Perennial:'Cut spent stems back in early spring.',Grass:'Cut to the ground in late winter.',Fern:'Keep the soil moist and mulched.',Groundcover:'Space close to knit into a carpet.',Herb:'Pinch often; harvest before it flowers.',Vine:'Give it support to climb.'};
+  if(base[p.cat]) parts.push(base[p.cat]);
+  if(p.light) parts.push('Best in '+String(p.light).toLowerCase()+'.');
+  if(/often browsed/i.test(p.deer||'')) parts.push('Protect from deer.');
+  return parts.join(' ')||'—';
+}
+// A static, top-down planting map for the report — same feet-space geometry,
+// plant sizing, colours and abbreviations as the live schematic (renderSchem),
+// but emitted as a self-contained SVG string that prints. Orientation is fixed
+// north-up (no viewpoint rotation) so the printed map is stable.
+function bedPlanSVG(bed,layout){
+  if(!bed||!bed.polygons) return '';
+  const polys=polysFt(bed);
+  let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+  const eat=(x,y)=>{ if(x<minX)minX=x; if(y<minY)minY=y; if(x>maxX)maxX=x; if(y>maxY)maxY=y; };
+  polys.forEach(p=>p.forEach(pt=>eat(pt[0],pt[1])));
+  const toks=[];
+  (layout||[]).forEach(it=>{ const pl=PLANTS[it.pid]; if(!pl) return;
+    if(!isFinite(it.x)||!isFinite(it.y)) return;
+    const def=it.exist?existDef(it.eid):null;
+    const r=it.exist?Math.max(0.55,((def&&def.r)||pl.spread)/2):plantRadius(pl.spread);
+    eat(it.x-r,it.y-r); eat(it.x+r,it.y+r); toks.push({it,pl,r}); });
+  if(!isFinite(minX)) return '';
+  const m=0.4, vbW=(maxX-minX)+2*m, vbH=(maxY-minY)+2*m;
+  const [wFt,hFt]=bedSizeFt(bed); const fs=Math.max(0.42,Math.min(wFt,hFt)*0.05);
+  const bc=bed.color||'#8aa17a'; const f2=n=>(+n).toFixed(2);
+  let s=`<svg class="rp-mapsvg" viewBox="${f2(minX-m)} ${f2(minY-m)} ${f2(vbW)} ${f2(vbH)}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Planting map for ${escHtml(bed.name)}">`;
+  polys.forEach(poly=>{ s+=`<polygon points="${poly.map(p=>f2(p[0])+','+f2(p[1])).join(' ')}" fill="${bc}" fill-opacity="0.10" stroke="${bc}" stroke-opacity="0.85" vector-effect="non-scaling-stroke" stroke-width="1.5"/>`; });
+  toks.sort((a,b)=>(a.it.exist?0:1)-(b.it.exist?0:1)).forEach(({it,pl,r})=>{
+    const tf=f2(Math.min(fs,r*0.95)), lab=escHtml(abbr(pl.name));
+    if(it.exist){
+      s+=`<g transform="translate(${f2(it.x)},${f2(it.y)})"><circle r="${f2(r)}" fill="#8f9c7e" fill-opacity="0.14" stroke="#7d8a66" stroke-opacity="0.7" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" stroke-width="1.5"/><text font-size="${tf}" font-family="Inter" font-weight="700" fill="#5c6a48" text-anchor="middle" dominant-baseline="central">${lab}</text></g>`;
+    } else {
+      const fill=bloomCol(it)||pl.color||'#6f8f5c';
+      s+=`<g transform="translate(${f2(it.x)},${f2(it.y)})"><circle r="${f2(r)}" fill="${fill}" stroke="#fff" stroke-opacity="0.9" vector-effect="non-scaling-stroke" stroke-width="1.5"/><text font-size="${tf}" font-family="Inter" font-weight="700" fill="#fff" text-anchor="middle" dominant-baseline="central" paint-order="stroke">${lab}</text></g>`;
+    }
+  });
+  return s+`</svg>`;
+}
 function reportHTML(units,title){
   if(!units||!units.length) return '<p class="rp-empty">Nothing selected to report on.</p>';
   const d=reportData(units);
   const rowMeta=pid=>{const p=PLANTS[pid];return{name:p.name,sci:p.sci,cat:p.cat||'',ht:plantHt(pid)};};
+  const htTxt=ht=>`~${ht%1?ht.toFixed(1):ht} ft`;
   const byCat=(a,b)=>{const ma=rowMeta(a.pid),mb=rowMeta(b.pid);return ma.cat.localeCompare(mb.cat)||ma.name.localeCompare(mb.name);};
+  const byHt=(a,b)=>plantHt(b.pid)-plantHt(a.pid)||byCat(a,b);   // tall → short (back → front)
   const buyRows=Object.keys(d.buy).map(pid=>({pid,qty:d.buy[pid]})).sort(byCat);
-  const allRows=Object.keys(d.all).map(pid=>({pid,...d.all[pid]})).sort(byCat);
   const buyTotal=buyRows.reduce((s,r)=>s+r.qty,0);
-  const cell=(pid,extra)=>{const m=rowMeta(pid);return `<td class="q">${extra}</td><td class="pn"><b>${escHtml(m.name)}</b><i>${escHtml(m.sci)}</i></td><td>${escHtml(m.cat)}</td><td>~${m.ht%1?m.ht.toFixed(1):m.ht} ft</td>`;};
   const label=units.length+' item'+(units.length>1?'s':'')+': '+units.map(u=>escHtml(u.name)).join(', ');
   let h=`<div class="rp">
     <h1>${escHtml(title||'Planting & buying report')}</h1>
     <p class="rp-meta">${label}</p>`;
-  // Section 1 — To buy (new plants only)
-  h+=`<section><h2>To buy <span class="rp-count">${buyTotal} plant${buyTotal===1?'':'s'}</span></h2>`;
+  // Section 1 — Shopping list (new plants only), deduped by species with size + spacing notes
+  h+=`<section><h2>Shopping list <span class="rp-count">${buyTotal} plant${buyTotal===1?'':'s'} to buy</span></h2>`;
   if(buyRows.length){
-    h+=`<table class="rp-tbl"><thead><tr><th class="q">Qty</th><th>Plant</th><th>Type</th><th>Mature ht</th></tr></thead><tbody>`;
-    h+=buyRows.map(r=>`<tr>${cell(r.pid,r.qty+'×')}</tr>`).join('');
+    h+=`<table class="rp-tbl"><thead><tr><th class="q">Qty</th><th>Plant</th><th>Type</th><th>Mature ht</th><th>Spacing</th></tr></thead><tbody>`;
+    h+=buyRows.map(r=>{const m=rowMeta(r.pid);
+      return `<tr><td class="q">${r.qty}×</td><td class="pn"><b>${escHtml(m.name)}</b><i>${escHtml(m.sci)}</i></td><td>${escHtml(m.cat)}</td><td>${htTxt(m.ht)}</td><td>${escHtml(ocLabel(r.pid))}</td></tr>`;}).join('');
     h+=`</tbody></table>`;
   } else h+=`<p class="rp-empty">No new plants to buy — everything selected already exists on site.</p>`;
   h+=`</section>`;
-  // Section 2 — Everything planned (new + existing)
-  h+=`<section><h2>Everything planned</h2>
-    <table class="rp-tbl"><thead><tr><th class="q">Qty</th><th>Plant</th><th>Type</th><th>Mature ht</th><th>Existing</th></tr></thead><tbody>`;
-  h+=allRows.map(r=>`<tr>${cell(r.pid,(r.n+r.ex)+'×')}<td>${r.ex?r.ex+' on site':'—'}</td></tr>`).join('');
-  h+=`</tbody></table></section>`;
-  // Section 3 — Per-selection planting breakdown
-  h+=`<section class="rp-beds"><h2>By bed</h2>`;
+  // Section 2 — Planting guide: per-bed instructions, ordered back(tall) → front(short)
+  h+=`<section class="rp-beds"><h2>Planting guide</h2>`;
   d.units.forEach(pb=>{
-    const rows=pb.rows.slice().sort((a,b)=>byCat(a,b));
-    const meta=[pb.unit.area?pb.unit.area+' sq ft':null, pb.unit.light?escHtml(pb.unit.light):null].filter(Boolean).join(' · ');
+    const rows=pb.rows.slice().sort(byHt);
+    const total=rows.reduce((s,r)=>s+r.newN+r.exN,0);
+    const buyN=rows.reduce((s,r)=>s+r.newN,0);
+    const stat=`${rows.length} species · ${total} plant${total===1?'':'s'}${buyN?` · ${buyN} to buy`:''}`;
+    const meta=[pb.unit.area?pb.unit.area+' sq ft':null, pb.unit.light?'Light: '+escHtml(pb.unit.light):null, stat].filter(Boolean).join(' · ');
     h+=`<div class="rp-bed"><h3>${escHtml(pb.unit.name)}</h3>${meta?`<p class="rp-bedmeta">${meta}</p>`:''}`;
+    if(pb.unit.blurb) h+=`<p class="rp-bedblurb">${escHtml(pb.unit.blurb)}</p>`;
+    const map=bedPlanSVG(pb.unit.bed, pb.unit.layout);
+    if(map) h+=`<div class="rp-map">${map}<p class="rp-mapcap">Planting map — labels are the first letters of each plant; circles show mature spread.</p></div>`;
     if(rows.length){
-      h+=`<table class="rp-tbl"><tbody>`;
-      h+=rows.map(r=>{const m=rowMeta(r.pid);const q=r.newN+r.exN;const tag=r.exN?(r.newN?` <span class="rp-tag">${r.newN} new · ${r.exN} existing</span>`:` <span class="rp-tag">existing</span>`):'';
-        return `<tr><td class="q">${q}×</td><td class="pn"><b>${escHtml(m.name)}</b>${tag}</td><td>${escHtml(m.cat)}</td></tr>`;}).join('');
+      h+=`<table class="rp-tbl"><thead><tr><th class="q">Key</th><th>Plant</th><th>Mature ht</th><th>Spacing</th><th>Light</th><th>Growing tips</th></tr></thead><tbody>`;
+      h+=rows.map(r=>{const m=rowMeta(r.pid);const p=PLANTS[r.pid]||{};const q=r.newN+r.exN;
+        const tag=r.exN?(r.newN?` <span class="rp-tag">${r.newN} new · ${r.exN} existing</span>`:` <span class="rp-tag">existing</span>`):'';
+        // Key badge mirrors this plant's token on the map above (same letters, same colour).
+        const inst=(pb.unit.layout||[]).find(x=>x.pid===r.pid&&!x.exist)||(pb.unit.layout||[]).find(x=>x.pid===r.pid);
+        const allExist=r.exN&&!r.newN;
+        const fill=allExist?'#8f9c7e':((inst&&bloomCol(inst))||p.color||'#6f8f5c');
+        return `<tr><td class="q"><span class="rp-key" style="background:${fill}">${escHtml(abbr(m.name))}</span> <span class="rp-keyq">${q}×</span></td><td class="pn"><b>${escHtml(m.name)}</b>${tag}</td><td>${htTxt(m.ht)}</td><td>${escHtml(ocLabel(r.pid))}</td><td>${escHtml(p.light||'—')}</td><td class="rp-tip">${escHtml(growTip(r.pid))}</td></tr>`;}).join('');
       h+=`</tbody></table>`;
     } else h+=`<p class="rp-empty">No plants here yet.</p>`;
     h+=`</div>`;
   });
-  h+=`</section></div>`;
+  h+=`</section>`;
+  // Section 4 — General planting tips (static, coastal-native oriented)
+  h+=`<section class="rp-tips"><h2>General planting tips</h2><ul class="rp-tiplist">
+    <li><b>When to plant.</b> Spring or early fall is best on Cape Cod — cooler air and moist soil let roots establish before summer heat or winter cold.</li>
+    <li><b>Spacing.</b> The "O.C." (on-center) figures above are measured trunk-to-trunk / crown-to-crown. Space to mature size so beds fill in without crowding; plants look sparse the first year by design.</li>
+    <li><b>Digging in.</b> Dig each hole as deep as the root ball and twice as wide. Loosen circling roots, set the crown level with the soil surface, backfill with native soil, and water it in to settle out air pockets.</li>
+    <li><b>Match the light.</b> Follow each plant's light column against the bed's exposure — sun-lovers sulk in shade, and shade plants scorch in full sun.</li>
+    <li><b>Water to establish.</b> Deep-soak twice a week through the first growing season, then taper. Drought-tolerant natives need far less once rooted in.</li>
+    <li><b>Mulch.</b> Keep a 2–3&nbsp;in. layer of shredded bark or leaf mulch over the bed (pulled back from stems) to hold moisture and suppress weeds.</li>
+    <li><b>Natives &amp; pollinators.</b> This plan leans on native, pollinator-friendly species — leave seed heads and stems standing over winter to feed birds and shelter insects.</li>
+  </ul></section>`;
+  h+=`</div>`;
   return h;
 }
 
@@ -3711,7 +3870,7 @@ function buildReportPicker(){
       closeReportPicker(); showReport(bedUnits(beds.length?beds:BEDS.map(b=>b.id), layouts), s.name); return; }
     const designs=readBedSaves().filter(s=>designSel.has(bedKey(s)));   // saved-bed
     if(!designs.length){ msg.textContent='Tick at least one saved design.'; return; }
-    const units=designs.map(s=>{ const bed=bedById(s.bed); return {name:(bed?bed.name:s.bed)+' — '+s.name, area:bed?bed.area_sqft:null, light:bed?bed.light:null, layout:s.layout||[]}; });
+    const units=designs.map(s=>{ const bed=bedById(s.bed); return {name:(bed?bed.name:s.bed)+' — '+s.name, area:bed?bed.area_sqft:null, light:bed?bed.light:null, blurb:bed?bed.blurb:null, bed:bed, layout:s.layout||[]}; });
     const title=designs.length===1?units[0].name:designs.length+' saved beds';
     closeReportPicker(); showReport(units,title);
   };
