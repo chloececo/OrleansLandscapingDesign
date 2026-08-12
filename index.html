@@ -166,10 +166,10 @@ header.top .topacts{margin-left:auto;align-self:center;display:flex;gap:8px;flex
 .plan.placing svg.overlay .bed{cursor:crosshair}
 g.vpmark{cursor:grab}
 g.vpmark:active{cursor:grabbing}
-g.vpmark .vparm{stroke-width:8;stroke-linecap:round;vector-effect:non-scaling-stroke}
-g.vpmark .vphalo{stroke:#fff;stroke-width:14;stroke-linecap:round;vector-effect:non-scaling-stroke;opacity:.9}
+g.vpmark .vparm{stroke-width:4;stroke-linecap:round;vector-effect:non-scaling-stroke}
+g.vpmark .vphalo{stroke:#fff;stroke-width:8;stroke-linecap:round;vector-effect:non-scaling-stroke;opacity:.9}
 g.vpmark .vphit{fill:transparent;stroke:transparent}
-g.vpmark.active .vparm{stroke-width:10}
+g.vpmark.active .vparm{stroke-width:5}
 .vpline{stroke-dasharray:11 9;stroke-width:3;vector-effect:non-scaling-stroke;opacity:.5;pointer-events:none}
 .caprt{display:flex;align-items:center;gap:10px;flex:none}
 .vpbtn{font:inherit;font-size:12px;border:1px solid var(--line);background:var(--card);color:#3f4a3a;
@@ -205,10 +205,13 @@ g.vpmark.active .vparm{stroke-width:10}
 .listcol:not(:empty){background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);overflow:hidden}
 .listcol .side{overflow:visible}
 .listcol .plist{flex:0 0 auto;overflow:visible}
+/* design picker relocated under the map */
+.leftcol>.designs{flex:none;background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:12px 14px}
+.leftcol>.designs .cap{margin-bottom:9px}
 /* Bed chosen: map shrinks to a rail on the left, plant list under it, views fill the right */
 .workspace.mapmin{grid-template-columns:31% 1fr}
 .workspace.mapmin>.leftcol{align-self:stretch}
-.workspace.mapmin .plan{position:sticky;top:14px;cursor:zoom-in}
+.workspace.mapmin .plan{cursor:zoom-in}
 .workspace.mapmin .plan::after{content:"⤢  Click map to enlarge";position:absolute;left:8px;top:8px;
   font-size:11px;font-weight:600;color:#fff;background:rgba(43,45,38,.72);padding:3px 9px;border-radius:8px;
   pointer-events:none;letter-spacing:.01em}
@@ -216,6 +219,40 @@ g.vpmark.active .vparm{stroke-width:10}
   .workspace.mapmin{grid-template-columns:1fr}
   .workspace.mapmin .plan{position:static;cursor:auto}
   .workspace.mapmin .plan::after{display:none}
+}
+/* No-scroll fit: with a bed open on a wide screen, size everything to one viewport */
+@media(min-width:1081px){
+  body.bedopen{overflow:hidden}
+  body.bedopen footer{display:none}
+  body.bedopen .wrap{height:100dvh;display:flex;flex-direction:column;padding-bottom:14px}
+  body.bedopen header.top{flex:none}
+  body.bedopen .workspace{flex:1 1 auto;min-height:0}
+  body.bedopen .workspace.mapmin{align-items:stretch}
+  /* left column: map (natural height) + plant list that scrolls inside its own card */
+  body.bedopen .leftcol{min-height:0}
+  body.bedopen .leftcol>.plan{flex:none}
+  body.bedopen .listcol{flex:1 1 auto;min-height:0;display:flex}
+  body.bedopen .listcol .side{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+  body.bedopen .listcol .plist{flex:1 1 auto;min-height:0;overflow:auto}
+  /* right column: schematic + elevation flex to share the height */
+  body.bedopen #detail{min-height:0}
+  body.bedopen .panel{display:flex;flex-direction:column;min-height:0;height:100%}
+  body.bedopen .phead{flex:none;padding-top:13px;padding-bottom:11px}
+  body.bedopen .body{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+  body.bedopen .stage{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+  body.bedopen .stage>.cap,body.bedopen .stage .stylepick{flex:none}
+  /* strip descriptive text so the two views own the height */
+  body.bedopen .phead .blurb{display:none}
+  body.bedopen .stage>.cap.hint2{display:none}
+  body.bedopen .elevwrap>.cap{margin-bottom:6px}
+  body.bedopen .stage>.svgwrap{flex:1 1 47%;min-height:0}
+  body.bedopen svg.schem{height:100%!important;max-height:none!important;width:100%}
+  body.bedopen .elevwrap{flex:1 1 53%;min-height:0;display:flex;flex-direction:column;margin-top:10px;padding-top:10px}
+  body.bedopen .elevwrap>.cap{flex:none}
+  body.bedopen #elevviews{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:8px}
+  body.bedopen #elevviews .elevblock{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+  body.bedopen #elevviews .elevblock>.svgwrap{flex:1 1 auto;min-height:0}
+  body.bedopen svg.elev{height:100%!important;max-height:none!important;width:100%}
 }
 
 /* ---- Detail ---- */
@@ -1088,6 +1125,7 @@ function selectBed(id){
   document.querySelectorAll('.tag').forEach(t=>t.classList.toggle('show',t.dataset.bed===id));
   renderDetail(); renderViewpoints();
   document.getElementById('workspace').classList.add('mapmin');   // shrink the map to a rail while working a bed
+  document.body.classList.add('bedopen');                         // fit the whole view to one screen (no page scroll)
   // Only scroll to the tray when it stacks below the plan (narrow screens); in the
   // workspace it sits beside the map, so no jump is needed.
   if(window.matchMedia('(max-width:1080px)').matches)
@@ -1096,6 +1134,7 @@ function selectBed(id){
 function closeDetail(){
   sel.bed=null; sel.plant=null; sel.editing=null; palOpen=false; palQuery='';
   document.getElementById('workspace').classList.remove('mapmin');   // restore the full-size map
+  document.body.classList.remove('bedopen');                         // allow normal page scroll again
   document.getElementById('listcol').replaceChildren();              // empty the list column
   placingVP=null; document.querySelector('.plan').classList.remove('placing');
   document.querySelectorAll('.bed').forEach(p=>p.classList.remove('active'));
@@ -1109,6 +1148,11 @@ function renderDetail(){
   const bed=bedById(sel.bed); const det=document.getElementById('detail'); const[wFt,hFt]=bedSizeFt(bed);
   const multiNote = bed.multi ? ' · two connected beds' : '';
   det.innerHTML='';
+  // Remove the previous render's relocated blocks first — otherwise their leftover
+  // ids (#stylepick, #plist, …) sit earlier in the DOM and getElementById fills those
+  // stale copies instead of the fresh panel's, blanking the picker and plant list.
+  document.getElementById('listcol').replaceChildren();
+  document.querySelectorAll('#workspace .leftcol > .designs').forEach(el=>el.remove());
   const panel=document.createElement('div'); panel.className='panel'; panel.style.setProperty('--bc',bed.color);
   panel.innerHTML=`
     <div class="phead">
@@ -1123,12 +1167,14 @@ function renderDetail(){
     </div>
     <div class="body">
       <div class="stage">
+        <div class="designs">
         <div class="cap"><span>Suggested designs — pick one for this bed</span><span class="caprt"><button class="btn ghost" id="saveBed" type="button">💾 Save this bed</button><button class="btn ghost" id="resetBed">Reset to suggestion</button></span></div>
         <div class="stylepick" id="stylepick"></div>
+        </div>
         <div class="svgwrap"><svg class="schem" id="schem"></svg></div>
         <div class="cap hint2"><span>Drag plants to arrange them${bed.multi?' — they move freely between both beds':''}</span></div>
         <div class="elevwrap">
-          <div class="cap"><span>Elevation — an angled view at maturity, tallest behind. Drag to spin around the bed and tilt up or down; hover a plant for its name.</span><span class="caprt"><button class="vpbtn" id="setvp" type="button">📍 Set viewpoint</button><button class="vpbtn clr" id="clrvp" type="button" style="display:none">Clear</button><span class="scalenote" id="elevscale"></span></span></div>
+          <div class="cap"><span>↔ Drag the elevation to move the view — or use “📍 Set viewpoint” to pick a spot on the plan.</span><span class="caprt"><button class="vpbtn" id="setvp" type="button">📍 Set viewpoint</button><span class="scalenote" id="elevscale"></span></span></div>
           <div id="elevviews"></div>
           <div class="eltip" id="eltip"></div>
         </div>
@@ -1182,7 +1228,6 @@ function renderDetail(){
   addpanel.addEventListener('keydown',e=>{ if(e.key==='Escape'){ setAddOpen(false); addtrigger.focus(); } });
   setAddOpen(palOpen);   // restore open state across the re-render an add triggers
   panel.querySelector('#setvp').onclick=()=>{ placingVP = placingVP===bed.id ? null : bed.id; document.querySelector('.plan').classList.toggle('placing', !!placingVP); if(placingVP) document.querySelector('.plan').scrollIntoView({behavior:'smooth',block:'start'}); renderViewpoints(); updateVpBtn(bed); };
-  panel.querySelector('#clrvp').onclick=()=>{ delete state.viewpoints[bed.id]; delete state.tilts[bed.id]; placingVP=null; save(); document.querySelector('.plan').classList.remove('placing'); renderViewpoints(); renderElev(); updateVpBtn(bed); };
   // Spin the viewpoint around the bed directly from the elevation (issue #38)
   const elevhost=panel.querySelector('#elevviews');
   elevhost.tabIndex=0; elevhost.setAttribute('role','group');
@@ -1198,6 +1243,12 @@ function renderDetail(){
   // so they sit under the map rail. Listeners were bound to these nodes above and
   // survive the move; ID-based lookups (renderList/renderSelCtrl) still resolve.
   document.getElementById('listcol').replaceChildren(panel.querySelector('.side'));
+  // Move the design picker under the map too, so the right column is all bed + elevation.
+  // Drop any picker left over from a previous render before inserting the fresh one,
+  // otherwise each re-render (e.g. picking a style) would stack another copy.
+  const leftcol=document.querySelector('#workspace .leftcol');
+  leftcol.querySelectorAll(':scope > .designs').forEach(el=>el.remove());
+  leftcol.insertBefore(panel.querySelector('.designs'), document.getElementById('listcol'));
 }
 
 // ---- Suggested-design picker (issue #24) ----------------------------------
@@ -1328,13 +1379,13 @@ function renderElev(){
   const topH=Math.max(3,...lay.map(showHt));
   const note=document.getElementById('elevscale'); if(note)note.textContent=`tallest ≈ ${Math.round(topH)} ft`;
   let views;
-  if(state.viewpoints[bed.id]) views=[{...viewOrient(bed),label:'Looking from your ✕ viewpoint'}];
+  if(state.viewpoints[bed.id]) views=[{...viewOrient(bed),label:''}];
   else if(/island/i.test(bed.name)) views=[{axis:'front',flip:false,label:'Front (looking in)'},{axis:'right',flip:false,label:'Right side'}];
   else views=[{axis:'front',flip:false,label:'Elevation'}];
   host.innerHTML='';
   views.forEach(view=>{
     const block=document.createElement('div'); block.className='elevblock';
-    if(views.length>1||state.viewpoints[bed.id]){const l=document.createElement('div'); l.className='elevlab'; l.textContent=view.label; block.appendChild(l);}
+    if((views.length>1||state.viewpoints[bed.id])&&view.label){const l=document.createElement('div'); l.className='elevlab'; l.textContent=view.label; block.appendChild(l);}
     const wrap=document.createElement('div'); wrap.className='svgwrap';
     const svg=document.createElementNS(SVGNS,'svg'); svg.setAttribute('class','elev');
     wrap.appendChild(svg); block.appendChild(wrap); host.appendChild(block);
@@ -3065,7 +3116,7 @@ function updateVpBtn(bed){
   if(!setvp)return;
   const has=!!state.viewpoints[bed.id], placing=placingVP===bed.id;
   setvp.classList.toggle('on',placing);
-  setvp.textContent = placing ? '✕ Click the plan…' : (has?'📍 Move viewpoint':'📍 Set viewpoint');
+  setvp.textContent = placing ? '✕ Click the plan…' : '📍 Set viewpoint';
   if(clrvp) clrvp.style.display = (has && !placing) ? '' : 'none';
 }
 function renderViewpoints(){
@@ -3701,6 +3752,7 @@ document.querySelector('.plan').addEventListener('click',e=>{
   if(e.target.closest('.bed')) return;        // bed clicks select a bed instead
   if(e.target.closest('.vpmark')) return;     // dragging a viewpoint marker
   document.getElementById('workspace').classList.remove('mapmin');
+  document.body.classList.remove('bedopen');  // enlarged map scrolls normally
 });
 
 handleSharedLink();
