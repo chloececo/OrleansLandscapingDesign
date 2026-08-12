@@ -951,18 +951,26 @@ function defaultLayout(bed, ids){
 //   • woodland — a fern/sedge/spring-wildflower understory for shade (this style
 //                relaxes the pollinator rule, since the right shade natives —
 //                ferns and sedges — aren't pollinator plants)
+//   • cottage  — a colour-rich abundance of showy native perennials with a
+//                flowering shrub or two for height (romantic, good for cutting)
+//   • foliage  — a restful leaf-texture tapestry of grasses, ferns and bold
+//                foliage, flowers as accents (works in sun OR shade; like
+//                woodland it relaxes the pollinator rule, since grasses and
+//                ferns carry the scheme)
 // stylePalette() returns an ids array shaped exactly like a RECS entry, which
 // defaultLayout() then arranges with the same #17 principles as any other bed.
 const STYLES={
   designer:{name:"Designer's Pick", blurb:"The hand-curated plan for this bed."},
-  meadow:{name:"Prairie / Meadow", blurb:"A loose native grass-and-perennial matrix — naturalistic and alive with pollinators."},
-  coastal:{name:"Coastal / Seaside", blurb:"Salt-, sand- and drought-tough Cape Cod natives — low, silvery, tolerant of the shore."},
+  meadow:{name:"Meadow", blurb:"A loose native grass-and-perennial matrix — naturalistic and alive with pollinators."},
+  coastal:{name:"Coastal", blurb:"Salt-, sand- and drought-tough Cape Cod natives — low, silvery, tolerant of the shore."},
   shrub:{name:"Shrub-anchored border", blurb:"Native shrub “bones” for four-season structure, with perennials layered in front."},
-  woodland:{name:"Woodland / Shade", blurb:"A layered fern, sedge and spring-wildflower understory for shady ground."}
+  woodland:{name:"Shady woodland", blurb:"A layered fern, sedge and spring-wildflower understory for shady ground."},
+  cottage:{name:"Floral cottage", blurb:"A romantic, colour-rich abundance of showy native perennials, with a flowering shrub or two for height — long on bloom and lovely to cut."},
+  foliage:{name:"Foliage & Texture", blurb:"A restful tapestry of contrasting leaf shapes — grasses, ferns and bold foliage — with flowers as quiet accents. Reads well in sun or shade."}
 };
 // Which light conditions each style suits (a bed is only offered styles that fit
 // its light — and only when the catalog can actually fill that style, see below).
-const STYLE_LIGHTS={meadow:['sun','part sun'], coastal:['sun','part sun'], shrub:['sun','part sun'], woodland:['shade','part sun']};
+const STYLE_LIGHTS={meadow:['sun','part sun'], coastal:['sun','part sun'], shrub:['sun','part sun'], woodland:['shade','part sun'], cottage:['sun','part sun'], foliage:['sun','part sun','shade']};
 const BEDLVL={sun:2,'part sun':1,shade:0};                 // bed light → 0(shade)…2(full sun)
 // Parse a plant's free-text light string into the [min,max] bed-levels it tolerates.
 function lightRange(s){s=(s||'').toLowerCase();
@@ -986,6 +994,13 @@ function plantRole(pid){const c=PLANTS[pid].cat;
 // shrubs that make good four-season "bones" for the shrub-anchored border.
 const COASTAL=new Set(['bayberry','beachplum','bearberry','littlebluestem','seasidegoldenrod','butterflymilkweed','newjerseytea','sweetfern','switchgrass','prairiedropseed','purplelovegrass','wildlupine','blazingstar','beardtongue','mountainmint','blueflagiris']);
 const STRUCTSHRUB=new Set(['inkberry','winterberry','bayberry','sweetpepperbush','chokeberry','highbushblueberry','newjerseytea','sweetfern','beachplum','shadbush','oakleafhydrangea']);
+// Cottage / cutting garden: flowering native shrubs that give the border height,
+// and the showiest long-blooming native perennials (the ones you'd actually cut).
+const COTTAGE_SHRUB=new Set(['oakleafhydrangea','viburnum','chokeberry','shadbush','sweetpepperbush','highbushblueberry','winterberry','newjerseytea']);
+const SHOWY=new Set(['coneflower','rudbeckia','newenglandaster','wildbergamot','blazingstar','beardtongue','oxeyesunflower','blueflagiris','cardinalflower','baptisia','goldenalexanders','anisegoldenrod','seasidegoldenrod','wildlupine','swampmilkweed','butterflymilkweed']);
+// Foliage & texture: plants carried by leaf, not flower — bold and fine foliage
+// that reads as a tapestry in sun or shade.
+const FOLIAGE=new Set(['littlebluestem','switchgrass','prairiedropseed','purplelovegrass','pennsylvaniasedge','cinnamonfern','christmasfern','ostrichfern','sedum','bayberry','sweetfern','baptisia','heuchera','goldengroundsel','bearberry','teaberry']);
 // The generic "Fern" placeholder is skipped in favour of the specific native ferns.
 const GEN_EXCLUDE=new Set(['fern']);
 // Rank a candidate within its style (higher = more on-theme).
@@ -995,6 +1010,8 @@ function styleScore(pid,style){const p=PLANTS[pid];
   if(style==='coastal')return (COASTAL.has(pid)?4:0)+dr+2*poll;
   if(style==='shrub')return (STRUCTSHRUB.has(pid)?4:0)+dr+2*poll+(p.cat==='Perennial'?1:0);
   if(style==='woodland')return (p.cat==='Fern'?3:0)+(p.cat==='Groundcover'?2:0)+(p.cat==='Perennial'?1:0)+poll;
+  if(style==='cottage')return (COTTAGE_SHRUB.has(pid)?3:0)+(SHOWY.has(pid)?3:0)+(p.cat==='Perennial'?2:0)+2*poll;
+  if(style==='foliage')return (FOLIAGE.has(pid)?3:0)+(p.cat==='Grass'?2:0)+(p.cat==='Fern'?2:0)+dr;
   return 0;}
 // Each style is built as ordered LAYERS (back structure → mid → groundcover skirt).
 // Per layer: a candidate filter, a cap on distinct species, and its share of the
@@ -1004,16 +1021,19 @@ const STYLE_LAYERS={
   meadow:[[pid=>PLANTS[pid].cat==='Grass',2,.28],[pid=>PLANTS[pid].cat==='Perennial',5,.58],[pid=>plantRole(pid)==='ground',2,.14]],
   coastal:[[pid=>COASTAL.has(pid)&&plantRole(pid)==='struct',2,.24],[pid=>COASTAL.has(pid)&&plantRole(pid)==='mid',4,.52],[pid=>plantRole(pid)==='ground',2,.24]],
   shrub:[[pid=>STRUCTSHRUB.has(pid),3,.36],[pid=>PLANTS[pid].cat==='Perennial',4,.44],[pid=>plantRole(pid)==='ground',2,.20]],
-  woodland:[[pid=>PLANTS[pid].cat==='Fern',2,.34],[pid=>PLANTS[pid].cat==='Perennial',3,.42],[pid=>plantRole(pid)==='ground',2,.24]]
+  woodland:[[pid=>PLANTS[pid].cat==='Fern',2,.34],[pid=>PLANTS[pid].cat==='Perennial',3,.42],[pid=>plantRole(pid)==='ground',2,.24]],
+  cottage:[[pid=>COTTAGE_SHRUB.has(pid),2,.24],[pid=>PLANTS[pid].cat==='Perennial',5,.58],[pid=>plantRole(pid)==='ground',2,.18]],
+  foliage:[[pid=>plantRole(pid)==='struct',2,.22],[pid=>['Grass','Fern','Perennial'].includes(PLANTS[pid].cat),5,.56],[pid=>plantRole(pid)==='ground',2,.22]]
 };
 function stylePalette(bed,style){
   if(style==='designer')return (RECS[bed.id]||[]).slice();
   const layers=STYLE_LAYERS[style]; if(!layers)return [];
-  const lvl=BEDLVL[bed.light], total=(RECS[bed.id]||[]).length||12, wood=style==='woodland';
+  const lvl=BEDLVL[bed.light], total=(RECS[bed.id]||[]).length||12, relaxPoll=style==='woodland'||style==='foliage';
   // baseline every style shares: native + light-appropriate + not deer-ravaged
-  // (a moderate-maintenance guard) + pollinator (relaxed only for woodland).
+  // (a moderate-maintenance guard) + pollinator (relaxed for the foliage-led
+  // styles — woodland and foliage — whose grasses and ferns aren't pollinators).
   const base=Object.keys(PLANTS).filter(pid=>{const p=PLANTS[pid];
-    return p.naNative && lightOK(pid,lvl) && p.deer!=='Often browsed' && (wood||p.pollinator) && !GEN_EXCLUDE.has(pid);});
+    return p.naNative && lightOK(pid,lvl) && p.deer!=='Often browsed' && (relaxPoll||p.pollinator) && !GEN_EXCLUDE.has(pid);});
   const out=[], used=new Set();
   layers.forEach(([filter,nmax,frac])=>{
     const pool=base.filter(pid=>!used.has(pid)&&filter(pid))
@@ -1032,7 +1052,7 @@ function stylePalette(bed,style){
 // advertise a "Coastal" option that would come out empty.
 function stylesForBed(bed){
   const ks=['designer'];
-  ['meadow','coastal','shrub','woodland'].forEach(k=>{
+  ['meadow','coastal','shrub','woodland','cottage','foliage'].forEach(k=>{
     if(!STYLE_LIGHTS[k].includes(bed.light))return;
     const pal=stylePalette(bed,k);
     if(new Set(pal).size>=3 && pal.length>=5)ks.push(k);
