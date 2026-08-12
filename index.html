@@ -30,7 +30,118 @@ header.top h1{
   letter-spacing:-.01em;margin:0;line-height:1;
 }
 header.top .sub{color:var(--muted);font-size:14px}
+header.top .topacts{margin-left:auto;align-self:center;display:flex;gap:8px;flex-wrap:wrap}
 .hint{color:var(--muted);font-size:13.5px;margin:2px 0 16px}
+
+/* ---- Saved plans modal + shared-link banner ---- */
+.modalbg{position:fixed;inset:0;background:rgba(30,33,24,.42);display:flex;align-items:flex-start;justify-content:center;
+  padding:8vh 16px 16px;z-index:50;opacity:0;pointer-events:none;transition:opacity .16s}
+.modalbg.show{opacity:1;pointer-events:auto}
+.modal{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);
+  width:min(560px,100%);max-height:82vh;overflow:auto;padding:20px 22px 22px}
+.modal h2{font-family:Fraunces,Georgia,serif;font-weight:500;font-size:22px;margin:0 0 2px}
+.modal .mhead{display:flex;align-items:baseline;gap:10px;margin-bottom:14px}
+.modal .mhead .close{margin-left:auto;border:none;background:none;font-size:22px;line-height:1;cursor:pointer;color:var(--muted)}
+.modal .msub{color:var(--muted);font-size:13px;margin:0 0 16px}
+.saverow{display:flex;gap:8px;margin-bottom:16px}
+.saverow input{flex:1;font-family:Inter;font-size:14px;color:var(--ink);background:var(--paper2);
+  border:1px solid var(--line2);border-radius:9px;padding:9px 11px}
+.saverow input:focus{outline:none;border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.saves-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.saves-empty{color:var(--muted);font-size:13.5px;text-align:center;padding:14px 0}
+.save-item{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:11px;
+  padding:10px 12px;background:var(--paper2)}
+.save-item .sinfo{min-width:0;flex:1}
+.save-item .sname{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.save-item .sts{color:var(--muted);font-size:12px}
+.save-item .sacts{display:flex;gap:6px;flex-shrink:0}
+.save-item .sacts .btn{padding:6px 10px;font-size:13px}
+.save-item .btn.del{color:#a2432f;border-color:var(--line2)}
+.msg{font-size:13px;color:var(--accent);min-height:17px;margin-top:12px}
+.sharebanner{background:#eef3e6;border:1px solid var(--line2);border-radius:12px;
+  padding:12px 14px;margin:0 0 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.sharebanner .stext{flex:1;min-width:200px;font-size:13.5px}
+.sharebanner .stext b{color:var(--ink)}
+.sharebanner .sacts{display:flex;gap:8px}
+
+/* modal tabs */
+.mtabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:0 0 16px}
+.mtab{appearance:none;border:none;background:none;font-family:Inter;font-size:14px;font-weight:500;color:var(--muted);
+  padding:8px 12px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.mtab.on{color:var(--ink);border-bottom-color:var(--accent)}
+.mpane{display:none}
+.mpane.on{display:block}
+
+/* name-clash confirm dialog + report-scope chooser */
+.modal.confirm{width:min(440px,100%)}
+.modal.confirm h2{font-family:Fraunces,Georgia,serif;font-weight:500;font-size:20px;margin:0 0 6px}
+.confirm-acts{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:18px}
+.rscope{display:flex;flex-direction:column;gap:9px;margin:0 0 14px}
+.rscope label{display:flex;align-items:center;gap:9px;cursor:pointer;font-size:14.5px}
+.rscope .rsnote{color:var(--muted);font-size:12.5px}
+.rpsel{margin:0 0 4px}
+.rlist{display:flex;flex-direction:column;gap:2px;margin:0 0 6px;max-height:230px;overflow:auto}
+.rrow{display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:8px;cursor:pointer;font-size:14px}
+.rrow:hover{background:var(--paper2)}
+.rrow .rname{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rrow .rmeta{color:var(--muted);font-size:12px;flex:none}
+
+/* report builder — bed multi-select */
+.bedpick{display:flex;flex-wrap:wrap;gap:7px;margin:0 0 14px}
+.bedchip{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line2);border-radius:999px;
+  padding:6px 12px 6px 10px;cursor:pointer;background:var(--paper2);font-size:13.5px;user-select:none}
+.bedchip .bdot{width:11px;height:11px;border-radius:50%;flex:none;border:1px solid rgba(0,0,0,.15)}
+.bedchip.on{border-color:var(--accent);background:#eef3e6;color:var(--ink);font-weight:500}
+.bedpick-acts{display:flex;gap:12px;margin:-6px 0 14px;font-size:12.5px}
+.bedpick-acts a{color:var(--accent);cursor:pointer;text-decoration:underline}
+
+/* this bed's saved designs, inline in the bed panel */
+.bedsaves{margin:0 0 14px}
+.bedsaves h3{margin:0 0 8px}
+.bedsaves .saves-list{margin:0}
+.bedsaves .save-item{padding:8px 10px}
+.bedsaves .save-item .sts{font-size:11.5px}
+.bedsaves .sacts .btn{padding:5px 9px;font-size:12.5px}
+
+/* report preview + print sheet */
+.reportmodal{width:min(760px,100%)}
+.reporttools{display:flex;gap:8px;align-items:center;margin-bottom:14px}
+.reporttools h2{margin:0 auto 0 0}
+.reportbody{max-height:64vh;overflow:auto;border:1px solid var(--line);border-radius:12px;padding:18px 20px;background:#fff}
+.rp h1{font-family:Fraunces,Georgia,serif;font-weight:500;font-size:24px;margin:0 0 2px}
+.rp .rp-meta{color:var(--muted);font-size:13px;margin:0 0 18px}
+.rp section{margin:0 0 22px}
+.rp h2{font-family:Fraunces,Georgia,serif;font-weight:500;font-size:18px;margin:0 0 8px;border-bottom:1px solid var(--line);padding-bottom:4px}
+.rp .rp-count{font-family:Inter;font-size:12px;color:var(--muted);font-weight:500;margin-left:8px}
+.rp h3{font-size:14px;margin:0 0 1px}
+.rp .rp-bedmeta{color:var(--muted);font-size:12px;margin:0 0 6px}
+.rp .rp-bed{margin:0 0 14px}
+.rp-tbl{width:100%;border-collapse:collapse;font-size:13px}
+.rp-tbl th{text-align:left;font-weight:600;color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.03em;padding:4px 8px;border-bottom:1px solid var(--line)}
+.rp-tbl td{padding:5px 8px;border-bottom:1px solid var(--line);vertical-align:baseline}
+.rp-tbl td.q,.rp-tbl th.q{width:1%;white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:600}
+.rp-tbl td.pn b{font-weight:600}
+.rp-tbl td.pn i{color:var(--muted);font-size:11.5px;margin-left:6px}
+.rp-tag{font-size:11px;color:var(--muted);font-style:italic}
+.rp-empty{color:var(--muted);font-size:13px;font-style:italic}
+.reportsheet{display:none}
+
+@media print{
+  body>*{display:none!important}
+  #reportview{display:block!important;position:static;inset:auto;background:#fff;padding:0;opacity:1}
+  #reportview .reporttools{display:none!important}
+  #reportview .modal{box-shadow:none;border:none;max-height:none;width:auto;padding:0}
+  #reportview .reportbody{max-height:none;overflow:visible;border:none;padding:0}
+  .rp section{page-break-inside:auto}
+  .rp .rp-bed,.rp-tbl tr{page-break-inside:avoid}
+}
+
+/* transient toast */
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(14px);
+  background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:13.5px;
+  box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:opacity .18s, transform .18s;z-index:60;max-width:88vw}
+.toast.show{opacity:.96;transform:translateX(-50%) translateY(0)}
 
 /* ---- Site plan ---- */
 .plan{
@@ -267,6 +378,10 @@ body.orbiting svg.elev,body.orbiting{cursor:grabbing}
   <header class="top">
     <h1>The Garden Plan</h1>
     <span class="sub">Tap a bed to see its plants — a Cape Cod native &amp; pollinator palette you can swap and rearrange.</span>
+    <span class="topacts">
+      <button id="reportBtn" class="btn ghost" type="button">📋 Make report</button>
+      <button id="savesBtn" class="btn ghost" type="button">💾 Saved plans</button>
+    </span>
   </header>
   <p class="hint">Seven beds around the house. Each one opens a planting tray below where you can move plants by dragging, swap any plant for another, and add or remove them. The palette leans on Cape Cod native, drought- and salt-tolerant, pollinator-friendly species — “right plant, right place” — so the garden feeds bees, butterflies, and birds while protecting groundwater and the bays. Each bed is arranged by classic design rules: plants are grouped in odd-numbered drifts (the Rule of Three: 3, 5, or 7 — never lonely singles), those drifts repeat across the bed for cohesion, and varied foliage textures are mixed so a bed reads well even out of bloom.</p>
 
@@ -393,11 +508,182 @@ let state={layouts:{}, deletedExisting:[], viewpoints:{...DEFAULT_VP}, seededPin
 let placingVP=null, vpDrag=null;   // viewpoint placement / drag state
 let justPlacedVP=null;             // last ✕ just dropped — lets a double-click on a bed undo it
 
-function save(){ try{ localStorage.setItem('gardenPlan16', JSON.stringify({layouts:state.layouts, deletedExisting:state.deletedExisting, viewpoints:state.viewpoints, seededPins:state.seededPins, styles:state.styles, tilts:state.tilts})); }catch(e){} }
+// A plan snapshot = everything that makes one arrangement distinct. Used by the
+// auto-save, the named saves, and the shareable link so all three stay in sync.
+function planSnapshot(){ return {layouts:state.layouts, deletedExisting:state.deletedExisting, viewpoints:state.viewpoints, seededPins:state.seededPins, styles:state.styles, tilts:state.tilts}; }
+function applyPlan(o){ if(!o)return; state.layouts=o.layouts||{}; state.deletedExisting=o.deletedExisting||[]; state.viewpoints={...DEFAULT_VP, ...(o.viewpoints||{})}; state.seededPins=o.seededPins||[]; state.styles=o.styles||{}; state.tilts=o.tilts||{}; }
+
+function save(){ try{ localStorage.setItem('gardenPlan16', JSON.stringify(planSnapshot())); }catch(e){} }
 function load(){ try{
     const s=localStorage.getItem('gardenPlan16');
-    if(s){const o=JSON.parse(s); state.layouts=o.layouts||{}; state.deletedExisting=o.deletedExisting||[]; state.viewpoints={...DEFAULT_VP, ...(o.viewpoints||{})}; state.seededPins=o.seededPins||[]; state.styles=o.styles||{}; state.tilts=o.tilts||{};}
+    if(s) applyPlan(JSON.parse(s));
   }catch(e){} }
+
+/* ============================================================================
+   Named saves + shareable links (issue #2)
+   - Auto-save (above) keeps the working/current state in `gardenPlan16`.
+   - Named saves live in `gardenSaves16` as an ordered list of {name,ts,plan}.
+   - A shareable link packs a plan into the URL hash (#plan=…), gzip-compressed
+     when the browser supports CompressionStream, else plain base64url JSON.
+   ========================================================================== */
+const SAVES_KEY='gardenSaves16';
+function readSaves(){ try{ return JSON.parse(localStorage.getItem(SAVES_KEY))||[]; }catch(e){ return []; } }
+function writeSaves(a){ try{ localStorage.setItem(SAVES_KEY, JSON.stringify(a)); }catch(e){} }
+
+// --- URL-safe byte<->base64 + gzip helpers --------------------------------
+function bytesToB64url(bytes){ let bin=''; const CH=0x8000; for(let i=0;i<bytes.length;i+=CH) bin+=String.fromCharCode.apply(null, bytes.subarray(i,i+CH)); return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
+function b64urlToBytes(s){ s=s.replace(/-/g,'+').replace(/_/g,'/'); while(s.length%4)s+='='; const bin=atob(s); const u=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i); return u; }
+async function encodePlan(obj){
+  const json=JSON.stringify(obj);
+  if(window.CompressionStream){
+    try{
+      const stream=new Blob([json]).stream().pipeThrough(new CompressionStream('gzip'));
+      const buf=await new Response(stream).arrayBuffer();
+      return 'g'+bytesToB64url(new Uint8Array(buf));
+    }catch(e){/* fall through to plain */}
+  }
+  return 'j'+bytesToB64url(new TextEncoder().encode(json));
+}
+async function decodePlan(str){
+  const tag=str[0], bytes=b64urlToBytes(str.slice(1));
+  if(tag==='g'){
+    const stream=new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+    const buf=await new Response(stream).arrayBuffer();
+    return JSON.parse(new TextDecoder().decode(new Uint8Array(buf)));
+  }
+  return JSON.parse(new TextDecoder().decode(bytes));   // tag 'j'
+}
+async function shareLink(plan){
+  const code=await encodePlan(plan);
+  const base=location.href.split('#')[0];
+  return base+'#plan='+code;
+}
+
+// Re-render everything after swapping in a different plan (load / import).
+function refreshAll(){ closeDetail(); renderViewpoints(); }
+
+// Save the current working state under a name (overwrites a same-name entry).
+function saveNamed(name){
+  name=(name||'').trim(); if(!name) return false;
+  const saves=readSaves();
+  const entry={name, ts:Date.now(), plan:planSnapshot()};
+  const i=saves.findIndex(s=>s.name.toLowerCase()===name.toLowerCase());
+  if(i>=0) saves[i]=entry; else saves.push(entry);
+  writeSaves(saves); return true;
+}
+
+/* ---- Single-bed designs: save/reload ONE bed's planting (issue #2 follow-up) ----
+   Distinct from whole-plan saves above. A bed design captures just that bed's
+   layout + its style/viewpoint/tilt + which of ITS existing plants were removed,
+   so it can be dropped back into the same bed later. */
+const BED_SAVES_KEY='gardenBedSaves16';
+function readBedSaves(){ try{ return JSON.parse(localStorage.getItem(BED_SAVES_KEY))||[]; }catch(e){ return []; } }
+function writeBedSaves(a){ try{ localStorage.setItem(BED_SAVES_KEY, JSON.stringify(a)); }catch(e){} }
+function bedExistingEids(bedId){ const bed=bedById(bedId); if(!bed)return []; return existingFor(bed).map(it=>it.eid).filter(Boolean); }
+function bedDesignSnapshot(bedId){
+  const eids=bedExistingEids(bedId);
+  return { bed:bedId,
+    layout:JSON.parse(JSON.stringify(state.layouts[bedId]||[])),
+    style:state.styles[bedId]||null,
+    viewpoint:state.viewpoints[bedId]?[...state.viewpoints[bedId]]:null,
+    tilt:(state.tilts&&state.tilts[bedId]!=null)?state.tilts[bedId]:null,
+    deleted:(state.deletedExisting||[]).filter(e=>eids.includes(e)) };
+}
+function saveBedDesign(bedId,name){
+  name=(name||'').trim(); if(!name||!bedId) return false;
+  const a=readBedSaves();
+  const entry={name, ts:Date.now(), ...bedDesignSnapshot(bedId)};
+  const i=a.findIndex(s=>s.bed===bedId && s.name.toLowerCase()===name.toLowerCase());
+  if(i>=0) a[i]=entry; else a.push(entry);
+  writeBedSaves(a); return true;
+}
+function applyBedDesign(d){
+  if(!d||!d.bed) return; const bedId=d.bed;
+  state.layouts[bedId]=JSON.parse(JSON.stringify(d.layout||[]));
+  if(d.style) state.styles[bedId]=d.style; else delete state.styles[bedId];
+  if(d.viewpoint) state.viewpoints[bedId]=[...d.viewpoint]; else delete state.viewpoints[bedId];
+  if(d.tilt!=null) state.tilts[bedId]=d.tilt; else if(state.tilts) delete state.tilts[bedId];
+  const eids=bedExistingEids(bedId);
+  state.deletedExisting=(state.deletedExisting||[]).filter(e=>!eids.includes(e));
+  (d.deleted||[]).forEach(e=>{ if(!state.deletedExisting.includes(e)) state.deletedExisting.push(e); });
+  save();
+}
+
+
+/* ---- Planting / buying report ---------------------------------------------
+   Built from a list of "units" — each a planting layout with a label. A unit
+   can be a live bed, a bed from a saved full plan, or a saved single-bed
+   design, so a report can be made from any of those sources.
+   unit = {name, area?, light?, layout:[…placements]}
+   "new" = plants to buy, "ex" = plants already in the ground (existing). */
+function unitCounts(layout){
+  const m={};
+  (layout||[]).forEach(it=>{ if(!PLANTS[it.pid])return;
+    const e=m[it.pid]||(m[it.pid]={pid:it.pid,newN:0,exN:0});
+    if(it.exist) e.exN++; else e.newN++; });
+  return m;
+}
+// Units for a set of live beds (or beds from a supplied `layouts` map, e.g. a saved plan).
+function bedUnits(bedIds, layouts){
+  const src=layouts||state.layouts;
+  return bedIds.map(bedById).filter(Boolean).map(b=>({name:b.name, area:b.area_sqft, light:b.light, layout:src[b.id]||[]}));
+}
+function reportData(units){
+  const buy={}, all={}, perUnit=[];   // buy: pid->qty ; all: pid->{n,ex}
+  units.forEach(u=>{
+    const rows=Object.values(unitCounts(u.layout));
+    rows.forEach(r=>{
+      if(r.newN) buy[r.pid]=(buy[r.pid]||0)+r.newN;
+      const a=all[r.pid]||(all[r.pid]={n:0,ex:0}); a.n+=r.newN; a.ex+=r.exN;
+    });
+    perUnit.push({unit:u, rows});
+  });
+  return {units:perUnit, buy, all};
+}
+function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function reportHTML(units,title){
+  if(!units||!units.length) return '<p class="rp-empty">Nothing selected to report on.</p>';
+  const d=reportData(units);
+  const rowMeta=pid=>{const p=PLANTS[pid];return{name:p.name,sci:p.sci,cat:p.cat||'',ht:plantHt(pid)};};
+  const byCat=(a,b)=>{const ma=rowMeta(a.pid),mb=rowMeta(b.pid);return ma.cat.localeCompare(mb.cat)||ma.name.localeCompare(mb.name);};
+  const buyRows=Object.keys(d.buy).map(pid=>({pid,qty:d.buy[pid]})).sort(byCat);
+  const allRows=Object.keys(d.all).map(pid=>({pid,...d.all[pid]})).sort(byCat);
+  const buyTotal=buyRows.reduce((s,r)=>s+r.qty,0);
+  const cell=(pid,extra)=>{const m=rowMeta(pid);return `<td class="q">${extra}</td><td class="pn"><b>${escHtml(m.name)}</b><i>${escHtml(m.sci)}</i></td><td>${escHtml(m.cat)}</td><td>~${m.ht%1?m.ht.toFixed(1):m.ht} ft</td>`;};
+  const label=units.length+' item'+(units.length>1?'s':'')+': '+units.map(u=>escHtml(u.name)).join(', ');
+  let h=`<div class="rp">
+    <h1>${escHtml(title||'Planting & buying report')}</h1>
+    <p class="rp-meta">${label}</p>`;
+  // Section 1 — To buy (new plants only)
+  h+=`<section><h2>To buy <span class="rp-count">${buyTotal} plant${buyTotal===1?'':'s'}</span></h2>`;
+  if(buyRows.length){
+    h+=`<table class="rp-tbl"><thead><tr><th class="q">Qty</th><th>Plant</th><th>Type</th><th>Mature ht</th></tr></thead><tbody>`;
+    h+=buyRows.map(r=>`<tr>${cell(r.pid,r.qty+'×')}</tr>`).join('');
+    h+=`</tbody></table>`;
+  } else h+=`<p class="rp-empty">No new plants to buy — everything selected already exists on site.</p>`;
+  h+=`</section>`;
+  // Section 2 — Everything planned (new + existing)
+  h+=`<section><h2>Everything planned</h2>
+    <table class="rp-tbl"><thead><tr><th class="q">Qty</th><th>Plant</th><th>Type</th><th>Mature ht</th><th>Existing</th></tr></thead><tbody>`;
+  h+=allRows.map(r=>`<tr>${cell(r.pid,(r.n+r.ex)+'×')}<td>${r.ex?r.ex+' on site':'—'}</td></tr>`).join('');
+  h+=`</tbody></table></section>`;
+  // Section 3 — Per-selection planting breakdown
+  h+=`<section class="rp-beds"><h2>By bed</h2>`;
+  d.units.forEach(pb=>{
+    const rows=pb.rows.slice().sort((a,b)=>byCat(a,b));
+    const meta=[pb.unit.area?pb.unit.area+' sq ft':null, pb.unit.light?escHtml(pb.unit.light):null].filter(Boolean).join(' · ');
+    h+=`<div class="rp-bed"><h3>${escHtml(pb.unit.name)}</h3>${meta?`<p class="rp-bedmeta">${meta}</p>`:''}`;
+    if(rows.length){
+      h+=`<table class="rp-tbl"><tbody>`;
+      h+=rows.map(r=>{const m=rowMeta(r.pid);const q=r.newN+r.exN;const tag=r.exN?(r.newN?` <span class="rp-tag">${r.newN} new · ${r.exN} existing</span>`:` <span class="rp-tag">existing</span>`):'';
+        return `<tr><td class="q">${q}×</td><td class="pn"><b>${escHtml(m.name)}</b>${tag}</td><td>${escHtml(m.cat)}</td></tr>`;}).join('');
+      h+=`</tbody></table>`;
+    } else h+=`<p class="rp-empty">No plants here yet.</p>`;
+    h+=`</div>`;
+  });
+  h+=`</section></div>`;
+  return h;
+}
 
 const bedById=id=>BEDS.find(b=>b.id===id);
 const allPts=bed=>bed.polygons.flat();
@@ -778,7 +1064,7 @@ function renderDetail(){
     </div>
     <div class="body">
       <div class="stage">
-        <div class="cap"><span>Suggested designs — pick one for this bed</span><button class="btn ghost" id="resetBed">Reset to suggestion</button></div>
+        <div class="cap"><span>Suggested designs — pick one for this bed</span><span class="caprt"><button class="btn ghost" id="saveBed" type="button">💾 Save this bed</button><button class="btn ghost" id="resetBed">Reset to suggestion</button></span></div>
         <div class="stylepick" id="stylepick"></div>
         <div class="svgwrap"><svg class="schem" id="schem"></svg></div>
         <div class="cap hint2"><span>Drag plants to arrange them${bed.multi?' — they move freely between both beds':''}</span></div>
@@ -796,6 +1082,7 @@ function renderDetail(){
             <input type="search" id="palfilter" class="palfilter" placeholder="Search plants…" autocomplete="off" aria-label="Search plants to add">
             <div class="palette" id="palette"></div>
           </div></div></div>
+        <div id="bedSaves" class="bedsaves" hidden></div>
         <h3>Plants in this bed</h3>
         <ul class="plist" id="plist"></ul>
       </div>
@@ -805,6 +1092,19 @@ function renderDetail(){
   // Reset re-generates the bed's CURRENTLY ACTIVE suggestion (Designer's Pick or a
   // chosen style), discarding hand-edits but keeping stationary existing plants.
   panel.querySelector('#resetBed').onclick=()=>{state.layouts[bed.id]=styleLayout(bed,activeStyle(bed));sel.plant=null;sel.editing=null;save();renderDetail();};
+  // Save just this bed's planting as a reusable design (issue #2 follow-up).
+  // Warn (overwrite / rename / keep both) on a same-name design for this bed.
+  panel.querySelector('#saveBed').onclick=()=>{
+    const name=(prompt('Save this bed’s planting as:', bed.name)||'').trim();
+    if(!name) return;
+    const mine=()=>readBedSaves().filter(s=>s.bed===bed.id);
+    saveWithClash({ name, kind:'bed design',
+      exists:n=>mine().some(s=>s.name.toLowerCase()===n.toLowerCase()),
+      taken:()=>mine().map(s=>s.name),
+      save:n=>saveBedDesign(bed.id,n),
+      done:(n,verb)=>{ toast(verb+' “'+n+'”.'); renderBedPanelSaves(bed); } });
+  };
+  renderBedPanelSaves(bed);
   renderStylePicker(bed);
   const addpanel=panel.querySelector('#addpanel'), addtrigger=panel.querySelector('#addtrigger');
   let addFilled=false;
@@ -3026,7 +3326,303 @@ document.addEventListener('pointerdown',e=>{
   }
 });
 
+/* ---- Saved plans modal + shared-link import (issue #2) ---- */
+let savesModal=null, savesMsgEl=null, savesListEl=null, savesBannerEl=null, pendingShared=null;
+let reportView=null, reportPicker=null, rpScope='plan';
+let toastEl=null, toastTimer=null;
+
+function flashMsg(t){ if(!savesMsgEl)return; savesMsgEl.textContent=t||''; }
+function toast(msg){
+  if(!toastEl){ toastEl=document.createElement('div'); toastEl.className='toast'; document.body.appendChild(toastEl); }
+  toastEl.textContent=msg; toastEl.classList.add('show');
+  if(toastTimer) clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>toastEl.classList.remove('show'),2600);
+}
+function fmtTs(ts){ try{ return new Date(ts).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}); }catch(e){ return ''; } }
+
+// Auto-suffix a name so it doesn't collide with any in `taken` (case-insensitive).
+function uniqueName(base, taken){
+  const low=new Set((taken||[]).map(n=>String(n).toLowerCase()));
+  if(!low.has(base.toLowerCase())) return base;
+  for(let i=2;i<999;i++){ const cand=base+' ('+i+')'; if(!low.has(cand.toLowerCase())) return cand; }
+  return base+' ('+Date.now()+')';
+}
+// Dialog shown when a name already exists. Resolves to: overwrite | new | rename | cancel.
+function confirmNameClash(kind,name){
+  return new Promise(res=>{
+    const bg=document.createElement('div'); bg.className='modalbg show';
+    bg.innerHTML=`<div class="modal confirm" role="dialog" aria-modal="true">
+      <h2>“${escHtml(name)}” already exists</h2>
+      <p class="msub">A ${escHtml(kind)} named “${escHtml(name)}” is already saved. Replace it, rename this one, or keep both?</p>
+      <div class="confirm-acts">
+        <button class="btn" data-c="cancel" type="button">Cancel</button>
+        <button class="btn" data-c="rename" type="button">Rename…</button>
+        <button class="btn" data-c="new" type="button">Save as new copy</button>
+        <button class="btn primary" data-c="overwrite" type="button">Overwrite</button>
+      </div></div>`;
+    document.body.appendChild(bg);
+    const done=c=>{ bg.remove(); document.removeEventListener('keydown',onEsc); res(c); };
+    function onEsc(e){ if(e.key==='Escape') done('cancel'); }
+    bg.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>done(b.dataset.c));
+    bg.addEventListener('pointerdown',e=>{ if(e.target===bg) done('cancel'); });
+    document.addEventListener('keydown',onEsc);
+  });
+}
+// Shared save flow with clash handling. opts: {name, kind, exists(n), taken(), save(n), done(name,verb)}.
+async function saveWithClash(o){
+  let nm=o.name;
+  for(;;){
+    if(!o.exists(nm)){ o.save(nm); o.done(nm,'Saved'); return; }
+    const c=await confirmNameClash(o.kind,nm);
+    if(c==='cancel') return;
+    if(c==='overwrite'){ o.save(nm); o.done(nm,'Saved'); return; }
+    if(c==='new'){ const u=uniqueName(nm,o.taken()); o.save(u); o.done(u,'Saved a new copy'); return; }
+    if(c==='rename'){ const nn=(prompt('Rename to:',nm)||'').trim(); if(!nn) return; nm=nn; }   // loop re-checks the new name
+  }
+}
+
+function renderSavesList(){
+  const saves=readSaves();
+  if(!saves.length){ savesListEl.innerHTML='<li class="saves-empty">No saved plans yet. Name the current arrangement above to keep a version you can return to.</li>'; return; }
+  savesListEl.innerHTML='';
+  saves.forEach((s,i)=>{
+    const li=document.createElement('li'); li.className='save-item';
+    li.innerHTML=`<div class="sinfo"><div class="sname"></div><div class="sts">Saved ${fmtTs(s.ts)}</div></div>
+      <div class="sacts">
+        <button class="btn" data-act="load">Load</button>
+        <button class="btn del" data-act="del" aria-label="Delete">Delete</button>
+      </div>`;
+    li.querySelector('.sname').textContent=s.name;
+    li.querySelector('[data-act="load"]').onclick=()=>{ applyPlan(s.plan); save(); refreshAll(); flashMsg('Loaded “'+s.name+'” into the working plan.'); };
+    li.querySelector('[data-act="del"]').onclick=()=>{ const a=readSaves(); a.splice(i,1); writeSaves(a); renderSavesList(); flashMsg('Deleted “'+s.name+'”.'); };
+    savesListEl.appendChild(li);
+  });
+}
+
+function showSharedBanner(){
+  savesBannerEl.innerHTML=`<div class="stext"><b>Someone shared a garden plan with you.</b> Import it to keep a copy, or dismiss to stay on your own plan.</div>
+    <div class="sacts"><button class="btn primary" data-act="imp">Import as new save</button><button class="btn ghost" data-act="dis">Dismiss</button></div>`;
+  savesBannerEl.style.display='flex';
+  savesBannerEl.querySelector('[data-act="imp"]').onclick=()=>{
+    const name=(prompt('Name this shared plan:', 'Shared plan')||'').trim();
+    if(!name){ flashMsg('Import cancelled — give it a name to save.'); return; }
+    saveNamed(name);
+    applyPlan(pendingShared); save(); refreshAll();
+    pendingShared=null; clearShareHash();
+    savesBannerEl.style.display='none';
+    renderSavesList(); flashMsg('Imported as “'+name+'” and loaded into the working plan.');
+  };
+  savesBannerEl.querySelector('[data-act="dis"]').onclick=()=>{ pendingShared=null; clearShareHash(); savesBannerEl.style.display='none'; flashMsg(''); };
+}
+function clearShareHash(){ try{ history.replaceState(null,'',location.href.split('#')[0]); }catch(e){ location.hash=''; } }
+
+// Saved single-bed designs (Beds tab)
+function renderBedSavesList(){
+  const el=savesModal.querySelector('#bedSavesList'); const a=readBedSaves();
+  if(!a.length){ el.innerHTML='<li class="saves-empty">No single-bed designs yet. Open a bed below the plan and use “💾 Save this bed”.</li>'; return; }
+  el.innerHTML='';
+  a.forEach((s,i)=>{
+    const bed=bedById(s.bed), bedName=bed?bed.name:s.bed;
+    const li=document.createElement('li'); li.className='save-item';
+    li.innerHTML=`<div class="sinfo"><div class="sname"></div><div class="sts"></div></div>
+      <div class="sacts"><button class="btn" data-act="load">Load</button><button class="btn del" data-act="del">Delete</button></div>`;
+    li.querySelector('.sname').textContent=s.name;
+    li.querySelector('.sts').textContent=bedName+' · saved '+fmtTs(s.ts);
+    li.querySelector('[data-act="load"]').onclick=()=>{ applyBedDesign(s); closeSaves(); if(bed) selectBed(bed.id); toast('Loaded “'+s.name+'” into '+bedName+'.'); };
+    li.querySelector('[data-act="del"]').onclick=()=>{ const arr=readBedSaves(); arr.splice(i,1); writeBedSaves(arr); renderBedSavesList(); flashMsg('Deleted “'+s.name+'”.'); };
+    el.appendChild(li);
+  });
+}
+// This bed's saved designs, shown inline in the open bed panel so you can reload
+// one without opening the Saved-plans modal (hidden when the bed has none).
+function renderBedPanelSaves(bed){
+  const box=document.getElementById('bedSaves'); if(!box)return;
+  const a=readBedSaves().filter(s=>s.bed===bed.id);
+  if(!a.length){ box.hidden=true; box.innerHTML=''; return; }
+  box.hidden=false;
+  box.innerHTML='<h3>Saved designs for this bed</h3><ul class="saves-list"></ul>';
+  const ul=box.querySelector('.saves-list');
+  a.forEach(s=>{
+    const li=document.createElement('li'); li.className='save-item';
+    li.innerHTML=`<div class="sinfo"><div class="sname"></div><div class="sts">Saved ${fmtTs(s.ts)}</div></div>
+      <div class="sacts"><button class="btn" data-act="load">Load</button><button class="btn del" data-act="del">Delete</button></div>`;
+    li.querySelector('.sname').textContent=s.name;
+    li.querySelector('[data-act="load"]').onclick=()=>{ applyBedDesign(s); selectBed(bed.id); toast('Loaded “'+s.name+'”.'); };
+    li.querySelector('[data-act="del"]').onclick=()=>{ const arr=readBedSaves(); const i=arr.findIndex(x=>x.bed===s.bed&&x.name===s.name&&x.ts===s.ts); if(i>=0){arr.splice(i,1);writeBedSaves(arr);} renderBedPanelSaves(bed); toast('Deleted “'+s.name+'”.'); };
+    ul.appendChild(li);
+  });
+}
+function switchTab(name){
+  savesModal.querySelectorAll('.mtab').forEach(t=>t.classList.toggle('on',t.dataset.tab===name));
+  savesModal.querySelectorAll('.mpane').forEach(p=>p.classList.toggle('on',p.dataset.pane===name));
+}
+
+function buildSavesModal(){
+  savesModal=document.createElement('div'); savesModal.className='modalbg';
+  savesModal.innerHTML=`<div class="modal" role="dialog" aria-modal="true" aria-label="Saved plans">
+    <div class="mhead"><h2>Saved plans</h2><button class="close" aria-label="Close">×</button></div>
+    <div class="sharebanner" style="display:none"></div>
+    <div class="mtabs">
+      <button class="mtab on" data-tab="plan" type="button">Whole plan</button>
+      <button class="mtab" data-tab="beds" type="button">Single beds</button>
+    </div>
+    <div class="mpane on" data-pane="plan">
+      <p class="msub">Your plan auto-saves as you work. Keep named versions of the <b>whole garden</b> here to switch between.</p>
+      <div class="saverow">
+        <input type="text" id="saveName" placeholder="Name this version (e.g. Client draft)" autocomplete="off">
+        <button class="btn primary" id="saveCurBtn" type="button">Save current</button>
+      </div>
+      <ul class="saves-list"></ul>
+    </div>
+    <div class="mpane" data-pane="beds">
+      <p class="msub">Saved designs for a <b>single bed</b>. Open a bed and use <b>💾 Save this bed</b> to add one, then reload it into that bed any time.</p>
+      <ul class="saves-list" id="bedSavesList"></ul>
+    </div>
+    <div class="msg"></div>
+  </div>`;
+  document.body.appendChild(savesModal);
+  savesMsgEl=savesModal.querySelector('.msg');
+  savesListEl=savesModal.querySelector('.saves-list');
+  savesBannerEl=savesModal.querySelector('.sharebanner');
+  const nameInput=savesModal.querySelector('#saveName');
+  // Save the whole plan — warn (overwrite / rename / keep both) on a same-name version.
+  const doSave=()=>{
+    const nm=nameInput.value.trim();
+    if(!nm){ flashMsg('Give the version a name first.'); nameInput.focus(); return; }
+    saveWithClash({ name:nm, kind:'version',
+      exists:n=>readSaves().some(s=>s.name.toLowerCase()===n.toLowerCase()),
+      taken:()=>readSaves().map(s=>s.name),
+      save:n=>saveNamed(n),
+      done:(n,verb)=>{ nameInput.value=''; renderSavesList(); flashMsg(verb+' “'+n+'”.'); } });
+  };
+  savesModal.querySelector('#saveCurBtn').onclick=doSave;
+  nameInput.addEventListener('keydown',e=>{ if(e.key==='Enter') doSave(); });
+  savesModal.querySelectorAll('.mtab').forEach(t=>t.onclick=()=>{ switchTab(t.dataset.tab); flashMsg(''); });
+  savesModal.querySelector('.close').onclick=closeSaves;
+  savesModal.addEventListener('pointerdown',e=>{ if(e.target===savesModal) closeSaves(); });
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&savesModal.classList.contains('show')) closeSaves(); });
+}
+function openSaves(tab){ renderSavesList(); renderBedSavesList(); flashMsg(''); if(tab) switchTab(tab); savesModal.classList.add('show'); }
+function closeSaves(){ savesModal.classList.remove('show'); }
+
+// ---- Report source picker: current beds, a saved full plan, or saved bed designs ----
+function buildReportPicker(){
+  reportPicker=document.createElement('div'); reportPicker.className='modalbg';
+  reportPicker.innerHTML=`<div class="modal" role="dialog" aria-modal="true" aria-label="Make a report">
+    <div class="mhead"><h2>Make a report</h2><button class="close" aria-label="Close">×</button></div>
+    <p class="msub">Build a printable planting &amp; buying report. Choose what to report on.</p>
+    <div class="rscope">
+      <label><input type="radio" name="rsrc" value="cur-all" checked> Current plan <span class="rsnote">— every bed</span></label>
+      <label><input type="radio" name="rsrc" value="cur-pick"> Current plan — choose beds</label>
+      <label><input type="radio" name="rsrc" value="saved-full"> A saved full plan</label>
+      <label><input type="radio" name="rsrc" value="saved-bed"> Saved single-bed designs</label>
+    </div>
+    <div class="rpsel" id="rpSelArea"></div>
+    <div class="msg" id="rpMsg"></div>
+    <div class="confirm-acts">
+      <button class="btn" id="rpCancel" type="button">Cancel</button>
+      <button class="btn primary" id="rpBuild" type="button">Build report</button>
+    </div>
+  </div>`;
+  document.body.appendChild(reportPicker);
+  const area=reportPicker.querySelector('#rpSelArea'), msg=reportPicker.querySelector('#rpMsg');
+  let bedSel=new Set(BEDS.map(b=>b.id));   // cur-pick selection
+  let planName=null;                        // saved-full: chosen save name
+  let designSel=new Set();                  // saved-bed: chosen design keys
+  const bedKey=s=>s.bed+'|'+s.name+'|'+s.ts;
+
+  const renderCurPick=()=>{
+    area.innerHTML='<div class="bedpick"></div><div class="bedpick-acts"><a data-act="all">Select all</a><a data-act="none">Clear</a></div>';
+    const wrap=area.querySelector('.bedpick');
+    BEDS.forEach(b=>{ const chip=document.createElement('button'); chip.type='button';
+      chip.className='bedchip'+(bedSel.has(b.id)?' on':'');
+      chip.innerHTML=`<span class="bdot" style="background:${b.color}"></span>${escHtml(b.name)}`;
+      chip.onclick=()=>{ if(bedSel.has(b.id))bedSel.delete(b.id); else bedSel.add(b.id); chip.classList.toggle('on',bedSel.has(b.id)); msg.textContent=''; };
+      wrap.appendChild(chip); });
+    area.querySelector('[data-act="all"]').onclick=()=>{ bedSel=new Set(BEDS.map(b=>b.id)); renderCurPick(); };
+    area.querySelector('[data-act="none"]').onclick=()=>{ bedSel=new Set(); renderCurPick(); };
+  };
+  const renderSavedFull=()=>{ const saves=readSaves();
+    if(!saves.length){ area.innerHTML='<p class="rp-empty">No saved full plans yet — save one from “💾 Saved plans”.</p>'; planName=null; return; }
+    if(planName==null) planName=saves[0].name;
+    area.innerHTML='<div class="rlist"></div>'; const list=area.querySelector('.rlist');
+    saves.forEach(s=>{ const row=document.createElement('label'); row.className='rrow';
+      row.innerHTML=`<input type="radio" name="rpFull" ${s.name===planName?'checked':''}> <span class="rname">${escHtml(s.name)}</span> <span class="rmeta">${fmtTs(s.ts)}</span>`;
+      row.querySelector('input').onchange=()=>{ planName=s.name; msg.textContent=''; };
+      list.appendChild(row); });
+  };
+  const renderSavedBed=()=>{ const designs=readBedSaves();
+    if(!designs.length){ area.innerHTML='<p class="rp-empty">No saved single-bed designs yet — open a bed and use “💾 Save this bed”.</p>'; return; }
+    area.innerHTML='<div class="rlist"></div>'; const list=area.querySelector('.rlist');
+    designs.forEach(s=>{ const k=bedKey(s), bed=bedById(s.bed);
+      const row=document.createElement('label'); row.className='rrow';
+      row.innerHTML=`<input type="checkbox" ${designSel.has(k)?'checked':''}> <span class="rname">${escHtml((bed?bed.name:s.bed)+' — '+s.name)}</span> <span class="rmeta">${fmtTs(s.ts)}</span>`;
+      row.querySelector('input').onchange=e=>{ if(e.target.checked)designSel.add(k); else designSel.delete(k); msg.textContent=''; };
+      list.appendChild(row); });
+  };
+  const setSrc=v=>{ rpScope=v; msg.textContent='';
+    if(v==='cur-all') area.innerHTML='';
+    else if(v==='cur-pick') renderCurPick();
+    else if(v==='saved-full') renderSavedFull();
+    else renderSavedBed();
+  };
+  reportPicker.querySelectorAll('input[name="rsrc"]').forEach(r=>r.onchange=()=>setSrc(r.value));
+  reportPicker.querySelector('#rpBuild').onclick=()=>{
+    if(rpScope==='cur-all'){ closeReportPicker(); showReport(bedUnits(BEDS.map(b=>b.id)),'Whole plan'); return; }
+    if(rpScope==='cur-pick'){ const beds=[...bedSel]; if(!beds.length){ msg.textContent='Pick at least one bed.'; return; }
+      const title=beds.length===1?bedById(beds[0]).name:beds.length+' beds';
+      closeReportPicker(); showReport(bedUnits(beds),title); return; }
+    if(rpScope==='saved-full'){ const s=readSaves().find(x=>x.name===planName); if(!s){ msg.textContent='Pick a saved plan.'; return; }
+      const layouts=(s.plan&&s.plan.layouts)||{}, beds=BEDS.filter(b=>(layouts[b.id]||[]).length).map(b=>b.id);
+      closeReportPicker(); showReport(bedUnits(beds.length?beds:BEDS.map(b=>b.id), layouts), s.name); return; }
+    const designs=readBedSaves().filter(s=>designSel.has(bedKey(s)));   // saved-bed
+    if(!designs.length){ msg.textContent='Tick at least one saved design.'; return; }
+    const units=designs.map(s=>{ const bed=bedById(s.bed); return {name:(bed?bed.name:s.bed)+' — '+s.name, area:bed?bed.area_sqft:null, light:bed?bed.light:null, layout:s.layout||[]}; });
+    const title=designs.length===1?units[0].name:designs.length+' saved beds';
+    closeReportPicker(); showReport(units,title);
+  };
+  reportPicker.querySelector('#rpCancel').onclick=closeReportPicker;
+  reportPicker.querySelector('.close').onclick=closeReportPicker;
+  reportPicker.addEventListener('pointerdown',e=>{ if(e.target===reportPicker) closeReportPicker(); });
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&reportPicker.classList.contains('show')) closeReportPicker(); });
+  reportPicker._reset=()=>{ bedSel=new Set(BEDS.map(b=>b.id)); planName=null; designSel=new Set();
+    reportPicker.querySelector('input[name="rsrc"][value="cur-all"]').checked=true; setSrc('cur-all'); };
+}
+function openReportPicker(){ reportPicker._reset(); reportPicker.classList.add('show'); }
+function closeReportPicker(){ reportPicker.classList.remove('show'); }
+
+// ---- Planting/buying report preview + print ----
+function buildReportView(){
+  reportView=document.createElement('div'); reportView.className='modalbg'; reportView.id='reportview';
+  reportView.innerHTML=`<div class="modal reportmodal" role="dialog" aria-modal="true" aria-label="Planting and buying report">
+    <div class="reporttools"><h2>Report</h2>
+      <button class="btn primary" id="printReport" type="button">🖨 Print</button>
+      <button class="close" id="closeReport" aria-label="Close">×</button></div>
+    <div class="reportbody" id="reportBody"></div>
+  </div>`;
+  document.body.appendChild(reportView);
+  reportView.querySelector('#printReport').onclick=()=>window.print();
+  reportView.querySelector('#closeReport').onclick=closeReport;
+  reportView.addEventListener('pointerdown',e=>{ if(e.target===reportView) closeReport(); });
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&reportView.classList.contains('show')) closeReport(); });
+}
+function showReport(units,title){ reportView.querySelector('#reportBody').innerHTML=reportHTML(units,title); reportView.classList.add('show'); }
+function closeReport(){ reportView.classList.remove('show'); }
+
+async function handleSharedLink(){
+  const m=(location.hash||'').match(/^#plan=(.+)$/);
+  if(!m) return;
+  try{
+    pendingShared=await decodePlan(decodeURIComponent(m[1]));
+    if(pendingShared && typeof pendingShared==='object'){ showSharedBanner(); openSaves(); }
+  }catch(e){ flashMsg && flashMsg('That shared link could not be read.'); clearShareHash(); }
+}
+
 load(); buildOverlay(); renderViewpoints();
+buildSavesModal(); buildReportView(); buildReportPicker();
+document.getElementById('savesBtn').onclick=()=>openSaves();
+document.getElementById('reportBtn').onclick=()=>openReportPicker();
+handleSharedLink();
 
 </script>
 </body>
