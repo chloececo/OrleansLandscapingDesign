@@ -183,9 +183,11 @@ header.top .topacts{margin-left:auto;align-self:center;display:flex;gap:8px;flex
   .rp h1,.rp h2,.rp h3{page-break-after:avoid;break-after:avoid}   /* no orphaned headings */
   .rp p{orphans:3;widows:3}
   .rp section{page-break-inside:auto;margin-bottom:16px}
+  .rp-guide{page-break-before:always}                             /* planting guide starts a fresh page */
   .rp-tbl thead{display:table-header-group}                        /* repeat column heads across pages */
   .rp-tbl tr,.rp-tiplist li,.rp-map,.rp-tips{page-break-inside:avoid}
   .rp-bed{page-break-inside:auto}
+  .rp-bed+.rp-bed{page-break-before:always}                        /* every bed after the first on its own page */
   .rp-tbl td{padding:3.5px 8px}
   .rp-tbl td.rp-tip{line-height:1.35}
   .rp-map .rp-mapsvg{height:2.3in;max-height:none}
