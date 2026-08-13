@@ -1357,11 +1357,12 @@ function closeDetail(){
   document.getElementById('workspace').classList.remove('mapmin');   // restore the full-size map
   document.body.classList.remove('bedopen');                         // allow normal page scroll again
   document.getElementById('listcol').replaceChildren();              // empty the list column
+  document.querySelectorAll('#workspace .leftcol > .designs').forEach(el=>el.remove());  // remove the design picker parked next to the map
   placingVP=null; document.querySelector('.plan').classList.remove('placing');
   document.querySelectorAll('.bed').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('rect.selbox').forEach(b=>b.classList.remove('show'));
   document.querySelectorAll('.tag').forEach(t=>t.classList.remove('show'));
-  document.getElementById('detail').innerHTML='<div class="empty"><b>No bed selected.</b><br>Tap any colored bed on the plan to start planting.</div>';
+  document.getElementById('detail').innerHTML='';
   renderViewpoints();
 }
 
