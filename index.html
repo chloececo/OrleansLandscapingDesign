@@ -245,10 +245,34 @@ g.vpmark.active .vparm{stroke-width:5}
 /* ---- How-to panel ---- */
 .howto-panel{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);
   padding:26px 30px;margin-bottom:8px}
-.howto-inner{max-width:70ch}
-.howto-inner h2{font-family:Fraunces,serif;font-weight:500;font-size:22px;margin:0 0 12px}
-.howto-lead{font-size:15.5px;color:var(--ink);margin:0 0 14px}
-.howto-body{font-size:14px;color:var(--muted);line-height:1.65;margin:0}
+.howto-inner{max-width:1180px}
+.howto-inner h2{font-family:Fraunces,serif;font-weight:500;font-size:24px;margin:0 0 6px}
+.howto-lead{font-size:15.5px;color:var(--ink);margin:0 0 24px;line-height:1.55;max-width:78ch}
+.howto-grid{columns:2;column-gap:46px}
+@media(max-width:760px){.howto-grid{columns:1}}
+.howto-sec{margin:0 0 22px;break-inside:avoid}
+.howto-sec h3{font-family:Fraunces,serif;font-weight:500;font-size:16.5px;color:var(--ink);
+  margin:0 0 9px;padding-bottom:5px;border-bottom:1px solid var(--line)}
+.howto-steps{list-style:none;margin:0;padding:0;font-size:14px;color:var(--muted);line-height:1.55}
+.howto-steps li{margin:0 0 8px;padding-left:1.15em;position:relative}
+.howto-steps li:last-child{margin-bottom:0}
+.howto-steps li::before{content:"›";position:absolute;left:0;color:var(--accent);font-weight:600}
+.howto-steps b{color:var(--ink);font-weight:600}
+.howto-btn{display:inline-block;background:var(--paper2);border:1px solid var(--line2);border-radius:6px;
+  padding:0 6px;font-size:12.5px;font-weight:500;color:var(--ink);white-space:nowrap;line-height:1.7}
+.howto-philo{background:var(--paper2);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:0 0 22px;break-inside:avoid}
+.howto-philo h3{border:none;margin:0 0 8px}
+.howto-philo p{font-size:14px;color:var(--muted);line-height:1.6;margin:0 0 10px}
+.howto-philo p:last-child{margin:0}
+.howto-philo b{color:var(--ink);font-weight:600}
+.howto-figrow{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin:0}
+@media(max-width:900px){.howto-figrow{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:520px){.howto-figrow{grid-template-columns:1fr}}
+.howto-fig{background:var(--paper2);border:1px solid var(--line);border-radius:12px;
+  padding:18px 16px;display:flex;flex-direction:column;gap:11px;align-items:center;text-align:center}
+.howto-fig svg{flex:none;width:60px;height:60px;color:var(--accent)}
+.howto-fig .figtxt{font-size:13.5px;color:var(--muted);line-height:1.5}
+.howto-fig .figtxt b{display:block;color:var(--ink);font-weight:600;margin-bottom:3px;font-size:14.5px}
 
 /* ---- Three-pane workspace (Option B) ---- */
 .workspace{display:grid;gap:20px;grid-template-columns:1fr;align-items:start}
@@ -516,8 +540,110 @@ body.orbiting svg.elev,body.orbiting{cursor:grabbing}
   <section id="howtoPanel" class="howto-panel" hidden>
     <div class="howto-inner">
       <h2>How to use this plan</h2>
-      <p class="howto-lead">Tap a bed on the plan to see its plants — a Cape&nbsp;Cod native &amp; pollinator palette you can swap and rearrange.</p>
-      <p class="howto-body">Seven beds around the house. Each one opens a planting tray beside the plan where you can move plants by dragging, swap any plant for another, and add or remove them. The palette leans on Cape Cod native, drought- and salt-tolerant, pollinator-friendly species — “right plant, right place” — so the garden feeds bees, butterflies, and birds while protecting groundwater and the bays. Each bed is arranged by classic design rules: plants are grouped in odd-numbered drifts (the Rule of Three: 3, 5, or 7 — never lonely singles), those drifts repeat across the bed for cohesion, and varied foliage textures are mixed so a bed reads well even out of bloom.</p>
+      <p class="howto-lead">Seven beds wrap the house, each planted from a Cape&nbsp;Cod native palette. Open any bed to see its plants, rearrange them, try a different look, and preview how the bed will stand up in real life — then save your work or print a report.</p>
+
+      <div class="howto-grid">
+      <div class="howto-sec">
+        <h3>Getting started</h3>
+        <ul class="howto-steps">
+          <li><b>Tap a bed</b> on the plan to open its planting tray beside the drawing.</li>
+          <li>The tray shows the bed from above (the schematic), an <b>elevation</b> view below it, and the list of plants growing there.</li>
+          <li>Tap the <b>×</b> at the top of the tray, or another bed, to close it.</li>
+        </ul>
+      </div>
+
+      <div class="howto-sec">
+        <h3>Arranging plants</h3>
+        <ul class="howto-steps">
+          <li><b>Move a plant</b> — drag its token around the schematic. In the two shared beds, plants move freely between both halves.</li>
+          <li><b>Remove a plant</b> — hover or tap a token and click the <b>✕</b> that appears on it.</li>
+          <li><b>Add a plant</b> — use <span class="howto-btn">＋ Add a plant</span> to open the palette, then pick from the Cape&nbsp;Cod natives that suit the bed.</li>
+          <li><b>Swap</b> a plant by removing one and adding another. Tap any token to see its details — light, height, pollinators, and care links — and to set bloom color where offered.</li>
+        </ul>
+      </div>
+
+      <div class="howto-sec">
+        <h3>Suggested designs</h3>
+        <ul class="howto-steps">
+          <li>Each bed comes with a hand-curated <b>Designer's Pick</b>, plus a few alternate styles that fit the bed's light and soil.</li>
+          <li>Under <b>Suggested designs</b>, tap a style chip to lay that design into the bed straight away.</li>
+          <li>Changed your mind after moving things around? <span class="howto-btn">Reset to suggestion</span> rebuilds the currently selected style.</li>
+        </ul>
+      </div>
+
+      <div class="howto-sec">
+        <h3>The elevation view</h3>
+        <ul class="howto-steps">
+          <li>The elevation shows the bed <b>at eye level</b> — how the plants' heights, shapes, and blooms read side by side, even out of season.</li>
+          <li><b>Drag the elevation</b> to spin the viewpoint around the bed and tilt it up or down; the arrow keys do the same.</li>
+          <li>Or use <span class="howto-btn">📍 Set viewpoint</span> to drop a spot on the plan and look at the bed from exactly there.</li>
+        </ul>
+      </div>
+
+      <div class="howto-sec">
+        <h3>Saving &amp; reports</h3>
+        <ul class="howto-steps">
+          <li><span class="howto-btn">💾 Save this bed</span> stores a single bed's planting as a reusable design you can reload into that bed any time.</li>
+          <li><span class="howto-btn">🗂️ Saved plans</span> keeps whole-plan saves and your single-bed designs together, ready to reload.</li>
+          <li><span class="howto-btn">📋 Make report</span> builds a printable guide — the full plan or just the beds you choose.</li>
+        </ul>
+      </div>
+
+      <div class="howto-philo">
+        <h3>The plant palette</h3>
+        <p>Every plant here is chosen for the Cape: <b>native, drought- and salt-tolerant, and pollinator-friendly</b> — “right plant, right place.” The garden feeds bees, butterflies, and birds while protecting groundwater and the bays.</p>
+        <p>Each bed follows classic design rules so it reads well all year: plants are grouped in odd-numbered drifts (the <b>Rule of Three</b> — 3, 5, or 7, never lonely singles), those drifts <b>repeat</b> across the bed for cohesion, and varied foliage <b>textures</b> are mixed so a bed still looks good out of bloom.</p>
+      </div>
+      </div>
+
+      <div class="howto-sec">
+        <h3>How it works</h3>
+        <div class="howto-figrow">
+          <div class="howto-fig">
+            <svg viewBox="0 0 56 56" fill="none" aria-hidden="true">
+              <rect x="9" y="12" width="30" height="22" rx="3" stroke="currentColor" stroke-width="2"/>
+              <circle cx="17" cy="22" r="2.4" fill="currentColor"/>
+              <circle cx="27" cy="28" r="2.4" fill="currentColor"/>
+              <circle cx="31" cy="18" r="2.4" fill="currentColor"/>
+              <path d="M9 42 H39" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+              <path d="M9 39 V45 M39 39 V45" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+              <path d="M46 12 V34" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+              <path d="M43 12 H49 M43 34 H49" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+            </svg>
+            <div class="figtxt"><b>It's drawn to scale.</b>Every bed and plant is shown at its real size, so the layout matches the actual garden.</div>
+          </div>
+          <div class="howto-fig">
+            <svg viewBox="0 0 56 56" fill="none" aria-hidden="true">
+              <circle cx="15" cy="19" r="8" stroke="currentColor" stroke-width="2"/>
+              <circle cx="15" cy="19" r="2.2" fill="currentColor"/>
+              <path d="M31 27 H49" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M32 27 a8 8 0 0 1 16 0" stroke="currentColor" stroke-width="2"/>
+              <path d="M19 41 H37 M23 37.5 L19 41 L23 44.5 M33 37.5 L37 41 L33 44.5"
+                    stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <div class="figtxt"><b>The two views stay in sync.</b>Move a plant from above and it moves in the elevation too.</div>
+          </div>
+          <div class="howto-fig">
+            <svg viewBox="0 0 56 56" fill="none" aria-hidden="true">
+              <rect x="9" y="12" width="38" height="30" rx="3" stroke="currentColor" stroke-width="2"/>
+              <path d="M9 21 H47" stroke="currentColor" stroke-width="2"/>
+              <circle cx="14" cy="16.5" r="1.3" fill="currentColor"/>
+              <circle cx="18" cy="16.5" r="1.3" fill="currentColor"/>
+              <path d="M21 31 l5 5 l10 -11" stroke="currentColor" stroke-width="2.6"
+                    stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <div class="figtxt"><b>Your work saves itself.</b>Changes are kept in this browser — no account needed. Use <b>Saved plans</b> to keep a design for another day or device.</div>
+          </div>
+          <div class="howto-fig">
+            <svg viewBox="0 0 56 56" fill="none" aria-hidden="true">
+              <path d="M16 9 H33 L41 17 V47 H16 Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+              <path d="M33 9 V17 H41" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+              <path d="M22 27 H35 M22 33 H35 M22 39 H30" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+            <div class="figtxt"><b>Reports match the screen.</b>A report always shows exactly what's on the plan right now.</div>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 
