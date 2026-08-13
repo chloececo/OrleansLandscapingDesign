@@ -3742,7 +3742,7 @@ function renderSavesList(){
         <button class="btn del" data-act="del" aria-label="Delete">Delete</button>
       </div>`;
     li.querySelector('.sname').textContent=s.name;
-    li.querySelector('[data-act="load"]').onclick=()=>{ applyPlan(s.plan); save(); refreshAll(); flashMsg('Loaded “'+s.name+'” into the working plan.'); };
+    li.querySelector('[data-act="load"]').onclick=()=>{ applyPlan(s.plan); save(); closeSaves(); refreshAll(); toast('Loaded “'+s.name+'” into the working plan.'); };
     li.querySelector('[data-act="del"]').onclick=()=>{ const a=readSaves(); a.splice(i,1); writeSaves(a); renderSavesList(); flashMsg('Deleted “'+s.name+'”.'); };
     savesListEl.appendChild(li);
   });
