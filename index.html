@@ -65,6 +65,13 @@ header.top .topacts{margin-left:auto;align-self:center;display:flex;gap:8px;flex
 .sharebanner .stext b{color:var(--ink)}
 .sharebanner .sacts{display:flex;gap:8px}
 
+/* add-a-plant palette modal (issue #47): wider than default, palette flows and the
+   modal itself scrolls so the sticky category heads stay put and more cards show. */
+.modal.addplant{width:min(820px,100%)}
+.modal.addplant .palfilter{margin:0 0 14px}
+.modal.addplant .palette{max-height:none;overflow:visible;padding-right:0}
+.modal.addplant .palhead{background:var(--card)}
+
 /* modal tabs */
 .mtabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:0 0 16px}
 .mtab{appearance:none;border:none;background:none;font-family:Inter;font-size:14px;font-weight:500;color:var(--muted);
@@ -400,12 +407,7 @@ select{width:100%;padding:9px 10px;border:1px solid var(--line2);border-radius:9
 .btn.ghost{background:none}
 /* Add-plant palette: a scannable grid of plant "ID cards" (icon + name + facts),
    grouped by category, replacing the old text-only <select>. */
-.adddrop{position:relative}
-.addtrigger{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left}
-.addtrigger .caret{color:var(--muted);transition:transform .15s}
-.addtrigger.open .caret{transform:rotate(180deg)}
-.addpanel{display:flex;flex-direction:column;gap:10px;margin-top:8px;padding:10px;border:1px solid var(--line2);border-radius:11px;background:var(--card);box-shadow:var(--shadow)}
-.addpanel[hidden]{display:none}
+.addtrigger{display:flex;align-items:center;justify-content:center;gap:8px;width:100%}
 .palfilter{width:100%;padding:8px 11px;border:1px solid var(--line2);border-radius:9px;background:var(--card);font-family:Inter;font-size:13.5px;color:var(--ink);box-sizing:border-box}
 .palfilter:focus{outline:none;border-color:var(--accent)}
 .palette{display:flex;flex-direction:column;gap:12px;max-height:320px;overflow:auto;padding-right:2px}
@@ -1351,6 +1353,7 @@ function selectBed(id){
 }
 function closeDetail(){
   sel.bed=null; sel.plant=null; sel.editing=null; palOpen=false; palQuery='';
+  if(addPlantModal) addPlantModal.classList.remove('show');          // dismiss the add-plant picker if open
   document.getElementById('workspace').classList.remove('mapmin');   // restore the full-size map
   document.body.classList.remove('bedopen');                         // allow normal page scroll again
   document.getElementById('listcol').replaceChildren();              // empty the list column
@@ -1399,12 +1402,9 @@ function renderDetail(){
       </div>
       <div class="side">
         <div id="selctrl"></div>
-        <div class="ctrls"><div class="adddrop" id="adddrop">
-          <button type="button" class="btn addtrigger" id="addtrigger" aria-haspopup="true" aria-expanded="false" aria-controls="addpanel">＋ Add a plant<span class="caret" aria-hidden="true">▾</span></button>
-          <div class="addpanel" id="addpanel" hidden>
-            <input type="search" id="palfilter" class="palfilter" placeholder="Search plants…" autocomplete="off" aria-label="Search plants to add">
-            <div class="palette" id="palette"></div>
-          </div></div></div>
+        <div class="ctrls">
+          <button type="button" class="btn addtrigger" id="addtrigger" aria-haspopup="dialog">＋ Add a plant</button>
+        </div>
         <div id="bedSaves" class="bedsaves" hidden></div>
         <h3>Plants in this bed</h3>
         <ul class="plist" id="plist"></ul>
@@ -1429,22 +1429,10 @@ function renderDetail(){
   };
   renderBedPanelSaves(bed);
   renderStylePicker(bed);
-  const addpanel=panel.querySelector('#addpanel'), addtrigger=panel.querySelector('#addtrigger');
-  let addFilled=false;
-  // Fill the grid lazily on first open: fillPalette fits each icon via getBBox, which
-  // returns 0 inside a display:none panel — so it must run only once the panel is shown.
-  const fillOnce=()=>{ if(addFilled)return; addFilled=true;
-    fillPalette(document.getElementById('palette'),bed);
-    const pf=document.getElementById('palfilter'); pf.value=palQuery;
-    pf.oninput=()=>{palQuery=pf.value;filterPalette(document.getElementById('palette'),palQuery);};
-    filterPalette(document.getElementById('palette'),palQuery);
-  };
-  const setAddOpen=open=>{ palOpen=open; addpanel.hidden=!open;
-    addtrigger.setAttribute('aria-expanded',open?'true':'false'); addtrigger.classList.toggle('open',open);
-    if(open){ fillOnce(); document.getElementById('palfilter').focus(); } };
-  addtrigger.onclick=()=>setAddOpen(!palOpen);
-  addpanel.addEventListener('keydown',e=>{ if(e.key==='Escape'){ setAddOpen(false); addtrigger.focus(); } });
-  setAddOpen(palOpen);   // restore open state across the re-render an add triggers
+  // The plant palette lives in a centered modal (issue #47) instead of an inline
+  // popover, so it gets full room and isn't clipped by the panel.
+  panel.querySelector('#addtrigger').onclick=()=>openAddPlant(bed);
+  if(palOpen) openAddPlant(bed);   // keep the picker open across the re-render an add triggers
   panel.querySelector('#setvp').onclick=()=>{ placingVP = placingVP===bed.id ? null : bed.id; document.querySelector('.plan').classList.toggle('placing', !!placingVP); if(placingVP) document.querySelector('.plan').scrollIntoView({behavior:'smooth',block:'start'}); renderViewpoints(); updateVpBtn(bed); };
   // Spin the viewpoint around the bed directly from the elevation (issue #38)
   const elevhost=panel.querySelector('#elevviews');
@@ -3646,17 +3634,40 @@ function filterPalette(container,q){
   const none=container.querySelector('.palnone'); if(none)none.hidden=total>0;
 }
 
-// Close the add-plant dropdown when clicking anywhere outside it (a card click lands
-// inside #adddrop, so adding a plant keeps it open for picking several in a row).
-document.addEventListener('pointerdown',e=>{
-  if(!palOpen)return;
-  const dd=document.getElementById('adddrop');
-  if(dd&&!dd.contains(e.target)){
-    palOpen=false;
-    const ap=document.getElementById('addpanel'); if(ap)ap.hidden=true;
-    const tr=document.getElementById('addtrigger'); if(tr){tr.setAttribute('aria-expanded','false');tr.classList.remove('open');}
-  }
-});
+/* ---- Add-a-plant palette modal (issue #47) ---------------------------------
+   A centered dialog hosting the search box + card grid, reusing the app's modal
+   pattern (backdrop click-to-close, × button, Esc-to-close). Built once; filled
+   for whichever bed is open when the trigger is clicked. Closes on add. */
+let addPlantModal=null;
+function buildAddPlantModal(){
+  addPlantModal=document.createElement('div'); addPlantModal.className='modalbg';
+  addPlantModal.innerHTML=`<div class="modal addplant" role="dialog" aria-modal="true" aria-label="Add a plant">
+    <div class="mhead"><h2>Add a plant</h2><button class="close" aria-label="Close">×</button></div>
+    <input type="search" id="palfilter" class="palfilter" placeholder="Search plants…" autocomplete="off" aria-label="Search plants to add">
+    <div class="palette" id="palette"></div>
+  </div>`;
+  document.body.appendChild(addPlantModal);
+  addPlantModal.querySelector('.close').onclick=()=>closeAddPlant(true);
+  addPlantModal.addEventListener('pointerdown',e=>{ if(e.target===addPlantModal) closeAddPlant(true); });
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&addPlantModal.classList.contains('show')){ e.preventDefault(); closeAddPlant(true); } });
+}
+function openAddPlant(bed){
+  palOpen=true;
+  const pal=addPlantModal.querySelector('#palette');
+  fillPalette(pal,bed);
+  // Clicking a card adds that plant and closes the picker (single-select feel).
+  pal.querySelectorAll('.plcard').forEach(card=>{ card.onclick=()=>{ palOpen=false; addPlantModal.classList.remove('show'); addPlant(bed,card.dataset.pid); }; });
+  const pf=addPlantModal.querySelector('#palfilter');
+  pf.value=palQuery;
+  pf.oninput=()=>{ palQuery=pf.value; filterPalette(pal,palQuery); };
+  filterPalette(pal,palQuery);
+  addPlantModal.classList.add('show');
+  pf.focus();
+}
+function closeAddPlant(returnFocus){
+  palOpen=false; addPlantModal.classList.remove('show');
+  if(returnFocus){ const tr=document.getElementById('addtrigger'); if(tr) tr.focus(); }
+}
 
 /* ---- Saved plans modal + shared-link import (issue #2) ---- */
 let savesModal=null, savesMsgEl=null, savesListEl=null, savesBannerEl=null, pendingShared=null;
@@ -3951,7 +3962,7 @@ async function handleSharedLink(){
 }
 
 load(); buildOverlay(); renderViewpoints();
-buildSavesModal(); buildReportView(); buildReportPicker();
+buildSavesModal(); buildReportView(); buildReportPicker(); buildAddPlantModal();
 document.getElementById('savesBtn').onclick=()=>openSaves();
 document.getElementById('reportBtn').onclick=()=>openReportPicker();
 
