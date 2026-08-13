@@ -505,7 +505,7 @@ body.orbiting svg.elev,body.orbiting{cursor:grabbing}
     </nav>
     <span class="topacts">
       <button id="reportBtn" class="btn ghost" type="button">📋 Make report</button>
-      <button id="savesBtn" class="btn ghost" type="button">💾 Saved plans</button>
+      <button id="savesBtn" class="btn ghost" type="button">🗂️ Saved plans</button>
     </span>
   </header>
 
@@ -3886,7 +3886,7 @@ function buildReportPicker(){
     area.querySelector('[data-act="none"]').onclick=()=>{ bedSel=new Set(); renderCurPick(); };
   };
   const renderSavedFull=()=>{ const saves=readSaves();
-    if(!saves.length){ area.innerHTML='<p class="rp-empty">No saved full plans yet — save one from “💾 Saved plans”.</p>'; planName=null; return; }
+    if(!saves.length){ area.innerHTML='<p class="rp-empty">No saved full plans yet — save one from “🗂️ Saved plans”.</p>'; planName=null; return; }
     if(planName==null) planName=saves[0].name;
     area.innerHTML='<div class="rlist"></div>'; const list=area.querySelector('.rlist');
     saves.forEach(s=>{ const row=document.createElement('label'); row.className='rrow';
