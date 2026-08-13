@@ -109,8 +109,13 @@ header.top .topacts{margin-left:auto;align-self:center;display:flex;gap:8px;flex
 .reporttools{display:flex;gap:8px;align-items:center;margin-bottom:14px}
 .reporttools h2{margin:0 auto 0 0}
 .reportbody{max-height:64vh;overflow:auto;border:1px solid var(--line);border-radius:12px;padding:18px 20px;background:#fff}
+.rpframe{width:100%;border-collapse:collapse}
+.rpframe>tbody>tr>td,.rpframe>thead>tr>td,.rpframe>tfoot>tr>td{padding:0}
+.rpframe-sp{height:0}
+.rp .rp-kicker{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600;margin:0 0 4px}
 .rp h1{font-family:Fraunces,Georgia,serif;font-weight:500;font-size:24px;margin:0 0 2px}
-.rp .rp-meta{color:var(--muted);font-size:13px;margin:0 0 18px}
+.rp .rp-meta{color:var(--muted);font-size:13px;margin:0 0 3px}
+.rp .rp-gen{color:var(--muted);font-size:11.5px;margin:0 0 18px}
 .rp section{margin:0 0 22px}
 .rp h2{font-family:Fraunces,Georgia,serif;font-weight:500;font-size:18px;margin:0 0 8px;border-bottom:1px solid var(--line);padding-bottom:4px}
 .rp .rp-count{font-family:Inter;font-size:12px;color:var(--muted);font-weight:500;margin-left:8px}
@@ -121,15 +126,22 @@ header.top .topacts{margin-left:auto;align-self:center;display:flex;gap:8px;flex
 .rp-tbl th{text-align:left;font-weight:600;color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.03em;padding:4px 8px;border-bottom:1px solid var(--line)}
 .rp-tbl td{padding:5px 8px;border-bottom:1px solid var(--line);vertical-align:baseline}
 .rp-tbl td.q,.rp-tbl th.q{width:1%;white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:600}
+.rp-tbl td.rp-ck,.rp-tbl th.rp-ck{width:1%;padding-right:2px;text-align:center}
+.rp-cb{width:15px;height:15px;margin:0;accent-color:#4e6840;cursor:pointer;vertical-align:middle}
+/* Reliable empty box in print, independent of form-control print quirks */
+@media print{
+  .rp-cb{-webkit-appearance:none;appearance:none;width:12px;height:12px;border:1.4px solid #6c7163;border-radius:3px;background:#fff}
+}
 .rp-tbl td.pn b{font-weight:600}
 .rp-tbl td.pn i{color:var(--muted);font-size:11.5px;margin-left:6px}
 .rp-tag{font-size:11px;color:var(--muted);font-style:italic}
 .rp .rp-bedblurb{font-size:12.5px;color:var(--ink);margin:0 0 8px;max-width:70ch;line-height:1.45}
 .rp .rp-bedtip{font-size:12px;color:var(--ink);margin:0 0 9px;max-width:72ch;line-height:1.5;background:#f3f6ee;border-left:3px solid #cbe4d3;border-radius:0 6px 6px 0;padding:7px 10px}
 .rp .rp-bedtip b{color:#2f6b43}
-.rp-map{margin:2px 0 11px;border:1px solid var(--line);border-radius:9px;padding:10px 10px 6px;background:#fcfdfb}
-.rp-map .rp-mapsvg{display:block;width:100%;max-height:250px;height:auto}
-.rp-map .rp-mapcap{margin:6px 0 0;font-size:10.5px;color:var(--muted);text-align:center;font-style:italic}
+.rp-map{margin:2px 0 12px;text-align:center}
+.rp-map .rp-mapfig{display:inline-block;border:1px solid var(--line);border-radius:9px;padding:10px;background:#fcfdfb;max-width:100%}
+.rp-map .rp-mapsvg{display:block;height:230px;width:auto;max-width:100%;margin:0 auto}
+.rp-map .rp-mapcap{margin:7px auto 0;font-size:10.5px;color:var(--muted);text-align:center;font-style:italic;max-width:32em}
 .rp-key{display:inline-block;min-width:1.7em;text-align:center;font-size:9.5px;font-weight:700;color:#fff;background:#6f8f5c;border-radius:5px;padding:1px 4px;letter-spacing:.02em}
 .rp-tbl td.q .rp-keyq{color:var(--ink);font-weight:600;margin-left:5px}
 .rp-tbl td.rp-tip{font-size:12px;color:var(--ink);line-height:1.4;white-space:normal;min-width:15em}
@@ -140,13 +152,34 @@ header.top .topacts{margin-left:auto;align-self:center;display:flex;gap:8px;flex
 .reportsheet{display:none}
 
 @media print{
+  /* All four margins are baked into the content so they survive the print dialog's
+     Margins = "None": left/right from .reportbody padding, top/bottom from the
+     repeating thead/tfoot spacers of the .rpframe table. @page is zeroed so those
+     are the single source of truth (no doubling when Margins = "Default"). */
+  @page{margin:0}
+  .rpframe-top{height:1in}
+  .rpframe-bot{height:1in}
+  html,body{background:#fff!important}
   body>*{display:none!important}
   #reportview{display:block!important;position:static;inset:auto;background:#fff;padding:0;opacity:1}
   #reportview .reporttools{display:none!important}
   #reportview .modal{box-shadow:none;border:none;max-height:none;width:auto;padding:0}
-  #reportview .reportbody{max-height:none;overflow:visible;border:none;padding:0}
-  .rp section{page-break-inside:auto}
-  .rp .rp-bed,.rp-tbl tr,.rp-tiplist li,.rp-map{page-break-inside:avoid}
+  #reportview .reportbody{max-height:none;overflow:visible;border:none;padding:0 1in}
+  /* Keep colour in the PDF — Key badges, map fills, bed tints (browsers drop backgrounds otherwise) */
+  .rp,.rp *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .rp{font-size:10.5pt;color:#23261f}
+  .rp h1{font-size:22pt}
+  .rp h2{font-size:14pt}
+  .rp h3{font-size:11.5pt}
+  .rp h1,.rp h2,.rp h3{page-break-after:avoid;break-after:avoid}   /* no orphaned headings */
+  .rp p{orphans:3;widows:3}
+  .rp section{page-break-inside:auto;margin-bottom:16px}
+  .rp-tbl thead{display:table-header-group}                        /* repeat column heads across pages */
+  .rp-tbl tr,.rp-tiplist li,.rp-map,.rp-tips{page-break-inside:avoid}
+  .rp-bed{page-break-inside:auto}
+  .rp-tbl td{padding:3.5px 8px}
+  .rp-tbl td.rp-tip{line-height:1.35}
+  .rp-map .rp-mapsvg{height:2.3in;max-height:none}
 }
 
 /* transient toast */
@@ -882,20 +915,23 @@ function reportHTML(units,title){
   const buyRows=Object.keys(d.buy).map(pid=>({pid,qty:d.buy[pid]})).sort(byCat);
   const buyTotal=buyRows.reduce((s,r)=>s+r.qty,0);
   const label=units.length+' item'+(units.length>1?'s':'')+': '+units.map(u=>escHtml(u.name)).join(', ');
+  const genDate=(()=>{try{return new Date().toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'});}catch(e){return '';}})();
   let h=`<div class="rp">
+    <p class="rp-kicker">Planting &amp; buying report</p>
     <h1>${escHtml(title||'Planting & buying report')}</h1>
-    <p class="rp-meta">${label}</p>`;
+    <p class="rp-meta">${label}</p>
+    ${genDate?`<p class="rp-gen">Generated ${escHtml(genDate)}</p>`:''}`;
   // Section 1 — Shopping list (new plants only), deduped by species with size + spacing notes
   h+=`<section><h2>Shopping list <span class="rp-count">${buyTotal} plant${buyTotal===1?'':'s'} to buy</span></h2>`;
   if(buyRows.length){
-    h+=`<table class="rp-tbl"><thead><tr><th class="q">Qty</th><th>Plant</th><th>Type</th><th>Mature ht</th><th>Spacing</th></tr></thead><tbody>`;
+    h+=`<table class="rp-tbl rp-shop"><thead><tr><th class="rp-ck" aria-label="Got it"></th><th class="q">Qty</th><th>Plant</th><th>Type</th><th>Mature ht</th><th>Spacing</th></tr></thead><tbody>`;
     h+=buyRows.map(r=>{const m=rowMeta(r.pid);
-      return `<tr><td class="q">${r.qty}×</td><td class="pn"><b>${escHtml(m.name)}</b><i>${escHtml(m.sci)}</i></td><td>${escHtml(m.cat)}</td><td>${htTxt(m.ht)}</td><td>${escHtml(ocLabel(r.pid))}</td></tr>`;}).join('');
+      return `<tr><td class="rp-ck"><input type="checkbox" class="rp-cb" aria-label="Bought ${escHtml(m.name)}"></td><td class="q">${r.qty}×</td><td class="pn"><b>${escHtml(m.name)}</b><i>${escHtml(m.sci)}</i></td><td>${escHtml(m.cat)}</td><td>${htTxt(m.ht)}</td><td>${escHtml(ocLabel(r.pid))}</td></tr>`;}).join('');
     h+=`</tbody></table>`;
   } else h+=`<p class="rp-empty">No new plants to buy — everything selected already exists on site.</p>`;
   h+=`</section>`;
   // Section 2 — Planting guide: per-bed instructions, ordered back(tall) → front(short)
-  h+=`<section class="rp-beds"><h2>Planting guide</h2>`;
+  h+=`<section class="rp-beds rp-guide"><h2>Planting guide</h2>`;
   d.units.forEach(pb=>{
     const rows=pb.rows.slice().sort(byHt);
     const total=rows.reduce((s,r)=>s+r.newN+r.exN,0);
@@ -905,7 +941,7 @@ function reportHTML(units,title){
     h+=`<div class="rp-bed"><h3>${escHtml(pb.unit.name)}</h3>${meta?`<p class="rp-bedmeta">${meta}</p>`:''}`;
     if(pb.unit.blurb) h+=`<p class="rp-bedblurb">${escHtml(pb.unit.blurb)}</p>`;
     const map=bedPlanSVG(pb.unit.bed, pb.unit.layout);
-    if(map) h+=`<div class="rp-map">${map}<p class="rp-mapcap">Planting map — labels are the first letters of each plant; circles show mature spread.</p></div>`;
+    if(map) h+=`<div class="rp-map"><div class="rp-mapfig">${map}<p class="rp-mapcap">Planting map — labels are the first letters of each plant; circles show mature spread.</p></div></div>`;
     if(rows.length){
       h+=`<table class="rp-tbl"><thead><tr><th class="q">Key</th><th>Plant</th><th>Mature ht</th><th>Spacing</th><th>Light</th><th>Growing tips</th></tr></thead><tbody>`;
       h+=rows.map(r=>{const m=rowMeta(r.pid);const p=PLANTS[r.pid]||{};const q=r.newN+r.exN;
@@ -931,7 +967,10 @@ function reportHTML(units,title){
     <li><b>Natives &amp; pollinators.</b> This plan leans on native, pollinator-friendly species — leave seed heads and stems standing over winter to feed birds and shelter insects.</li>
   </ul></section>`;
   h+=`</div>`;
-  return h;
+  // Wrap in a thead/tfoot "frame" table: browsers repeat thead at the top and tfoot at
+  // the bottom of every printed page, so the spacer rows become per-page top/bottom
+  // margins that survive even when the print dialog's Margins is set to "None".
+  return `<table class="rpframe"><thead><tr><td><div class="rpframe-sp rpframe-top"></div></td></tr></thead><tbody><tr><td>${h}</td></tr></tbody><tfoot><tr><td><div class="rpframe-sp rpframe-bot"></div></td></tr></tfoot></table>`;
 }
 
 const bedById=id=>BEDS.find(b=>b.id===id);
