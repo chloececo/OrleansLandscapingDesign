@@ -88,20 +88,22 @@ header.top .topacts{margin-left:auto;align-self:center;display:flex;gap:8px;flex
 .rscope label{display:flex;align-items:center;gap:9px;cursor:pointer;font-size:14.5px}
 .rscope .rsnote{color:var(--muted);font-size:12.5px}
 .rpsel{margin:0 0 4px}
+.rp-step{font-size:12px;font-weight:600;color:var(--muted);margin:2px 0 8px;text-transform:uppercase;letter-spacing:.04em}
 .rlist{display:flex;flex-direction:column;gap:2px;margin:0 0 6px;max-height:230px;overflow:auto}
 .rrow{display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:8px;cursor:pointer;font-size:14px}
 .rrow:hover{background:var(--paper2)}
 .rrow .rname{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .rrow .rmeta{color:var(--muted);font-size:12px;flex:none}
 
-/* report builder — bed multi-select */
-.bedpick{display:flex;flex-wrap:wrap;gap:7px;margin:0 0 14px}
-.bedchip{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line2);border-radius:999px;
-  padding:6px 12px 6px 10px;cursor:pointer;background:var(--paper2);font-size:13.5px;user-select:none}
-.bedchip .bdot{width:11px;height:11px;border-radius:50%;flex:none;border:1px solid rgba(0,0,0,.15)}
-.bedchip.on{border-color:var(--accent);background:#eef3e6;color:var(--ink);font-weight:500}
-.bedpick-acts{display:flex;gap:12px;margin:-6px 0 14px;font-size:12.5px}
-.bedpick-acts a{color:var(--accent);cursor:pointer;text-decoration:underline}
+/* report builder — one version per bed */
+.bedvers{max-height:320px;overflow:auto;margin:0 0 4px}
+.bedgrp{margin:0 0 13px}
+.bedgrp-h{display:flex;align-items:center;gap:8px;font-weight:600;font-size:13.5px;margin:0 0 3px}
+.bedgrp-h .bdot{width:11px;height:11px;border-radius:50%;flex:none;border:1px solid rgba(0,0,0,.15)}
+.bedgrp-tag{margin-left:auto;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.bedgrp.excluded .bedgrp-h .bdot,.bedgrp.excluded .bedgrp-name{opacity:.45}
+.bedgrp.empty .vgrp{display:none}
+.vgrp{display:flex;flex-direction:column;gap:1px;padding-left:2px}
 
 /* this bed's saved designs, inline in the bed panel */
 .bedsaves{margin:0 0 14px}
@@ -3673,7 +3675,7 @@ function closeAddPlant(returnFocus){
 
 /* ---- Saved plans modal + shared-link import (issue #2) ---- */
 let savesModal=null, savesMsgEl=null, savesListEl=null, savesBannerEl=null, pendingShared=null;
-let reportView=null, reportPicker=null, rpScope='plan';
+let reportView=null, reportPicker=null, rpScope='full';
 let toastEl=null, toastTimer=null;
 
 function flashMsg(t){ if(!savesMsgEl)return; savesMsgEl.textContent=t||''; }
@@ -3850,17 +3852,25 @@ function buildSavesModal(){
 function openSaves(tab){ renderSavesList(); renderBedSavesList(); flashMsg(''); if(tab) switchTab(tab); savesModal.classList.add('show'); }
 function closeSaves(){ savesModal.classList.remove('show'); }
 
-// ---- Report source picker: current beds, a saved full plan, or saved bed designs ----
+// ---- Report source picker: two steps — Full plan / Choose beds, then pick a version ----
+// A bed counts as "having a planting" if its layout holds any known plant.
+function bedHasPlants(layout){ return (layout||[]).some(it=>PLANTS[it.pid]); }
+// Do the current working layouts match a saved full plan's layouts exactly?
+function sameLayouts(a,b){ return BEDS.every(x=>JSON.stringify((a&&a[x.id])||[])===JSON.stringify((b&&b[x.id])||[])); }
+// The working plan is worth listing as "Current (unsaved)" when it has plants
+// and isn't already identical to one of the saved full plans.
+function workingPlanIsUnsaved(){
+  if(!BEDS.some(b=>bedHasPlants(state.layouts[b.id]))) return false;
+  return !readSaves().some(s=>sameLayouts(state.layouts,(s.plan&&s.plan.layouts)||{}));
+}
 function buildReportPicker(){
   reportPicker=document.createElement('div'); reportPicker.className='modalbg';
   reportPicker.innerHTML=`<div class="modal" role="dialog" aria-modal="true" aria-label="Make a report">
     <div class="mhead"><h2>Make a report</h2><button class="close" aria-label="Close">×</button></div>
     <p class="msub">Build a printable planting &amp; buying report. Choose what to report on.</p>
     <div class="rscope">
-      <label><input type="radio" name="rsrc" value="cur-all" checked> Current plan <span class="rsnote">— every bed</span></label>
-      <label><input type="radio" name="rsrc" value="cur-pick"> Current plan — choose beds</label>
-      <label><input type="radio" name="rsrc" value="saved-full"> A saved full plan</label>
-      <label><input type="radio" name="rsrc" value="saved-bed"> Saved single-bed designs</label>
+      <label><input type="radio" name="rsrc" value="full"> Full plan <span class="rsnote">— every bed</span></label>
+      <label><input type="radio" name="rsrc" value="beds"> Choose beds</label>
     </div>
     <div class="rpsel" id="rpSelArea"></div>
     <div class="msg" id="rpMsg"></div>
@@ -3871,67 +3881,88 @@ function buildReportPicker(){
   </div>`;
   document.body.appendChild(reportPicker);
   const area=reportPicker.querySelector('#rpSelArea'), msg=reportPicker.querySelector('#rpMsg');
-  let bedSel=new Set(BEDS.map(b=>b.id));   // cur-pick selection
-  let planName=null;                        // saved-full: chosen save name
-  let designSel=new Set();                  // saved-bed: chosen design keys
+  let fullVer=null;              // Full plan version: {type:'current'} | {type:'saved',name}
+  let bedPick={};                // Choose beds: bedId -> {type:'current'} | {type:'design',key} — one version per bed
   const bedKey=s=>s.bed+'|'+s.name+'|'+s.ts;
+  const verRow=(checked,label,meta)=>{
+    const row=document.createElement('label'); row.className='rrow';
+    row.innerHTML=`<input type="radio" name="rpVer" ${checked?'checked':''}> <span class="rname">${escHtml(label)}</span>${meta?` <span class="rmeta">${escHtml(meta)}</span>`:''}`;
+    return row;
+  };
 
-  const renderCurPick=()=>{
-    area.innerHTML='<div class="bedpick"></div><div class="bedpick-acts"><a data-act="all">Select all</a><a data-act="none">Clear</a></div>';
-    const wrap=area.querySelector('.bedpick');
-    BEDS.forEach(b=>{ const chip=document.createElement('button'); chip.type='button';
-      chip.className='bedchip'+(bedSel.has(b.id)?' on':'');
-      chip.innerHTML=`<span class="bdot" style="background:${b.color}"></span>${escHtml(b.name)}`;
-      chip.onclick=()=>{ if(bedSel.has(b.id))bedSel.delete(b.id); else bedSel.add(b.id); chip.classList.toggle('on',bedSel.has(b.id)); msg.textContent=''; };
-      wrap.appendChild(chip); });
-    area.querySelector('[data-act="all"]').onclick=()=>{ bedSel=new Set(BEDS.map(b=>b.id)); renderCurPick(); };
-    area.querySelector('[data-act="none"]').onclick=()=>{ bedSel=new Set(); renderCurPick(); };
+  // Step 2 for Full plan: the current (unsaved) working plan + every saved full plan.
+  const renderFull=()=>{
+    const saves=readSaves(), hasCur=workingPlanIsUnsaved();
+    if(!hasCur && !saves.length){ area.innerHTML='<p class="rp-empty">No plan to report yet — add plants to a bed, or save a plan from “🗂️ Saved plans”.</p>'; fullVer=null; return; }
+    if(!fullVer) fullVer=hasCur?{type:'current'}:{type:'saved',name:saves[0].name};
+    area.innerHTML='<div class="rp-step">Which version?</div><div class="rlist"></div>';
+    const list=area.querySelector('.rlist');
+    if(hasCur){ const on=fullVer.type==='current'; const row=verRow(on,'Current plan','unsaved');
+      row.querySelector('input').onchange=()=>{ fullVer={type:'current'}; msg.textContent=''; }; list.appendChild(row); }
+    saves.forEach(s=>{ const on=fullVer.type==='saved'&&fullVer.name===s.name;
+      const row=verRow(on,s.name,fmtTs(s.ts));
+      row.querySelector('input').onchange=()=>{ fullVer={type:'saved',name:s.name}; msg.textContent=''; }; list.appendChild(row); });
   };
-  const renderSavedFull=()=>{ const saves=readSaves();
-    if(!saves.length){ area.innerHTML='<p class="rp-empty">No saved full plans yet — save one from “🗂️ Saved plans”.</p>'; planName=null; return; }
-    if(planName==null) planName=saves[0].name;
-    area.innerHTML='<div class="rlist"></div>'; const list=area.querySelector('.rlist');
-    saves.forEach(s=>{ const row=document.createElement('label'); row.className='rrow';
-      row.innerHTML=`<input type="radio" name="rpFull" ${s.name===planName?'checked':''}> <span class="rname">${escHtml(s.name)}</span> <span class="rmeta">${fmtTs(s.ts)}</span>`;
-      row.querySelector('input').onchange=()=>{ planName=s.name; msg.textContent=''; };
-      list.appendChild(row); });
+
+  // Step 2 for Choose beds: every bed listed with its own versions. Uniform for
+  // all beds — each version is a checkbox you toggle on/off; picking one clears the
+  // others (one version per bed), and toggling it off leaves the bed out. A bed's
+  // versions are its current (unsaved) planting + any saved single-bed designs; a
+  // bed with neither is shown greyed out and un-pickable.
+  const sameVer=(a,b)=>a&&b&&(a.type===b.type)&&(a.type!=='design'||a.key===b.key);
+  const renderBeds=()=>{
+    area.innerHTML='<div class="rp-step">Pick a version for each bed you want (skip the rest)</div><div class="bedvers"></div>';
+    const holder=area.querySelector('.bedvers');
+    BEDS.forEach(b=>{
+      const vers=[];
+      if(bedHasPlants(state.layouts[b.id])) vers.push({ver:{type:'current'},label:'Current',meta:'unsaved'});
+      readBedSaves().filter(s=>s.bed===b.id).forEach(s=>vers.push({ver:{type:'design',key:bedKey(s)},label:s.name,meta:fmtTs(s.ts)}));
+      const empty=!vers.length;
+      const grp=document.createElement('div'); grp.className='bedgrp'+(empty?' empty':'');
+      grp.innerHTML=`<div class="bedgrp-h"><span class="bdot" style="background:${b.color}"></span><span class="bedgrp-name">${escHtml(b.name)}</span><span class="bedgrp-tag"></span></div><div class="vgrp"></div>`;
+      const vg=grp.querySelector('.vgrp'), tag=grp.querySelector('.bedgrp-tag');
+      const sync=()=>{ const inc=!!bedPick[b.id]; grp.classList.toggle('excluded',!inc);
+        tag.textContent = inc ? '' : (empty ? 'Empty — nothing to report' : 'Not included'); };
+      const inputs=[];
+      vers.forEach(v=>{
+        const row=document.createElement('label'); row.className='rrow';
+        row.innerHTML=`<input type="checkbox" ${sameVer(bedPick[b.id],v.ver)?'checked':''}> <span class="rname">${escHtml(v.label)}</span>${v.meta?` <span class="rmeta">${escHtml(v.meta)}</span>`:''}`;
+        const inp=row.querySelector('input'); inputs.push(inp);
+        inp.onchange=()=>{ if(inp.checked){ bedPick[b.id]=v.ver; inputs.forEach(o=>{ if(o!==inp) o.checked=false; }); } else { delete bedPick[b.id]; } msg.textContent=''; sync(); };
+        vg.appendChild(row);
+      });
+      sync();
+      holder.appendChild(grp);
+    });
   };
-  const renderSavedBed=()=>{ const designs=readBedSaves();
-    if(!designs.length){ area.innerHTML='<p class="rp-empty">No saved single-bed designs yet — open a bed and use “💾 Save this bed”.</p>'; return; }
-    area.innerHTML='<div class="rlist"></div>'; const list=area.querySelector('.rlist');
-    designs.forEach(s=>{ const k=bedKey(s), bed=bedById(s.bed);
-      const row=document.createElement('label'); row.className='rrow';
-      row.innerHTML=`<input type="checkbox" ${designSel.has(k)?'checked':''}> <span class="rname">${escHtml((bed?bed.name:s.bed)+' — '+s.name)}</span> <span class="rmeta">${fmtTs(s.ts)}</span>`;
-      row.querySelector('input').onchange=e=>{ if(e.target.checked)designSel.add(k); else designSel.delete(k); msg.textContent=''; };
-      list.appendChild(row); });
-  };
-  const setSrc=v=>{ rpScope=v; msg.textContent='';
-    if(v==='cur-all') area.innerHTML='';
-    else if(v==='cur-pick') renderCurPick();
-    else if(v==='saved-full') renderSavedFull();
-    else renderSavedBed();
-  };
+
+  const setSrc=v=>{ rpScope=v; msg.textContent=''; if(v==='full') renderFull(); else renderBeds(); };
   reportPicker.querySelectorAll('input[name="rsrc"]').forEach(r=>r.onchange=()=>setSrc(r.value));
   reportPicker.querySelector('#rpBuild').onclick=()=>{
-    if(rpScope==='cur-all'){ closeReportPicker(); showReport(bedUnits(BEDS.map(b=>b.id)),'Whole plan'); return; }
-    if(rpScope==='cur-pick'){ const beds=[...bedSel]; if(!beds.length){ msg.textContent='Pick at least one bed.'; return; }
-      const title=beds.length===1?bedById(beds[0]).name:beds.length+' beds';
-      closeReportPicker(); showReport(bedUnits(beds),title); return; }
-    if(rpScope==='saved-full'){ const s=readSaves().find(x=>x.name===planName); if(!s){ msg.textContent='Pick a saved plan.'; return; }
-      const layouts=(s.plan&&s.plan.layouts)||{}, beds=BEDS.filter(b=>(layouts[b.id]||[]).length).map(b=>b.id);
-      closeReportPicker(); showReport(bedUnits(beds.length?beds:BEDS.map(b=>b.id), layouts), s.name); return; }
-    const designs=readBedSaves().filter(s=>designSel.has(bedKey(s)));   // saved-bed
-    if(!designs.length){ msg.textContent='Tick at least one saved design.'; return; }
-    const units=designs.map(s=>{ const bed=bedById(s.bed); return {name:(bed?bed.name:s.bed)+' — '+s.name, area:bed?bed.area_sqft:null, light:bed?bed.light:null, blurb:bed?bed.blurb:null, bed:bed, layout:s.layout||[]}; });
-    const title=designs.length===1?units[0].name:designs.length+' saved beds';
+    if(rpScope!=='full'&&rpScope!=='beds'){ msg.textContent='Choose Full plan or Choose beds first.'; return; }
+    if(rpScope==='full'){
+      if(!fullVer){ msg.textContent='Nothing to report yet.'; return; }
+      if(fullVer.type==='current'){ closeReportPicker(); showReport(bedUnits(BEDS.map(b=>b.id)),'Current plan'); return; }
+      const s=readSaves().find(x=>x.name===fullVer.name); if(!s){ msg.textContent='Pick a version.'; return; }
+      const layouts=(s.plan&&s.plan.layouts)||{}, beds=BEDS.filter(b=>bedHasPlants(layouts[b.id])).map(b=>b.id);
+      closeReportPicker(); showReport(bedUnits(beds.length?beds:BEDS.map(b=>b.id), layouts), s.name); return;
+    }
+    const units=[];   // Choose beds: one unit per bed that has a version picked
+    BEDS.forEach(b=>{ const v=bedPick[b.id]; if(!v) return;
+      if(v.type==='current'){ const u=bedUnits([b.id])[0]; if(u) units.push(u); return; }
+      const d=readBedSaves().find(s=>bedKey(s)===v.key); if(!d) return; const bed=bedById(d.bed);
+      units.push({name:(bed?bed.name:d.bed)+' — '+d.name, area:bed?bed.area_sqft:null, light:bed?bed.light:null, blurb:bed?bed.blurb:null, bed:bed, layout:d.layout||[]});
+    });
+    if(!units.length){ msg.textContent='Pick a version for at least one bed.'; return; }
+    const title=units.length===1?units[0].name:units.length+' beds';
     closeReportPicker(); showReport(units,title);
   };
   reportPicker.querySelector('#rpCancel').onclick=closeReportPicker;
   reportPicker.querySelector('.close').onclick=closeReportPicker;
   reportPicker.addEventListener('pointerdown',e=>{ if(e.target===reportPicker) closeReportPicker(); });
   document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&reportPicker.classList.contains('show')) closeReportPicker(); });
-  reportPicker._reset=()=>{ bedSel=new Set(BEDS.map(b=>b.id)); planName=null; designSel=new Set();
-    reportPicker.querySelector('input[name="rsrc"][value="cur-all"]').checked=true; setSrc('cur-all'); };
+  reportPicker._reset=()=>{ fullVer=null; bedPick={}; rpScope=null; area.innerHTML='';
+    reportPicker.querySelectorAll('input[name="rsrc"]').forEach(r=>r.checked=false); };
 }
 function openReportPicker(){ reportPicker._reset(); reportPicker.classList.add('show'); }
 function closeReportPicker(){ reportPicker.classList.remove('show'); }
