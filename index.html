@@ -259,7 +259,7 @@ g.vpmark.active .vparm{stroke-width:5}
 .listcol .plist{flex:0 0 auto;overflow:visible}
 /* design picker relocated under the map */
 .leftcol>.designs{flex:none;background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:12px 14px}
-.leftcol>.designs .cap{margin-bottom:9px}
+.leftcol>.designs .cap{margin-bottom:9px;display:flex;justify-content:space-between;align-items:center;gap:10px}
 /* Bed chosen: map shrinks to a rail on the left, plant list under it, views fill the right */
 .workspace.mapmin{grid-template-columns:31% 1fr}
 .workspace.mapmin>.leftcol{align-self:stretch}
@@ -1384,12 +1384,13 @@ function renderDetail(){
           &nbsp;<span class="lightpill">☀ ${bed.light}</span></div>
         <div class="blurb">${bed.blurb}</div>
       </div>
+      <button class="btn ghost" id="saveBed" type="button">💾 Save this bed</button>
       <button class="close" title="Close" aria-label="Close">×</button>
     </div>
     <div class="body">
       <div class="stage">
         <div class="designs">
-        <div class="cap"><span>Suggested designs — pick one for this bed</span><span class="caprt"><button class="btn ghost" id="saveBed" type="button">💾 Save this bed</button><button class="btn ghost" id="resetBed">Reset to suggestion</button></span></div>
+        <div class="cap"><span>Suggested designs</span><span class="caprt"><button class="btn ghost" id="resetBed">Reset to suggestion</button></span></div>
         <div class="stylepick" id="stylepick"></div>
         </div>
         <div class="svgwrap"><svg class="schem" id="schem"></svg></div>
