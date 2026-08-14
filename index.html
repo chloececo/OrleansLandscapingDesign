@@ -770,14 +770,14 @@ const DEFAULT_VP={
 };
 // state.styles: which suggested design (see STYLES) is active per bed — persisted
 // so a returning user keeps the scheme they picked. Absent → 'designer' (RECS).
-let state={layouts:{}, deletedExisting:[], viewpoints:{...DEFAULT_VP}, seededPins:[], styles:{}, tilts:{}}, sel={bed:null, plant:null, editing:null};
+let state={layouts:{}, deletedExisting:[], viewpoints:{...DEFAULT_VP}, seededPins:[], styles:{}, tilts:{}, constraints:{}}, sel={bed:null, plant:null, editing:null};
 let placingVP=null, vpDrag=null;   // viewpoint placement / drag state
 let justPlacedVP=null;             // last ✕ just dropped — lets a double-click on a bed undo it
 
 // A plan snapshot = everything that makes one arrangement distinct. Used by the
 // auto-save, the named saves, and the shareable link so all three stay in sync.
-function planSnapshot(){ return {layouts:state.layouts, deletedExisting:state.deletedExisting, viewpoints:state.viewpoints, seededPins:state.seededPins, styles:state.styles, tilts:state.tilts}; }
-function applyPlan(o){ if(!o)return; state.layouts=o.layouts||{}; state.deletedExisting=o.deletedExisting||[]; state.viewpoints={...DEFAULT_VP, ...(o.viewpoints||{})}; state.seededPins=o.seededPins||[]; state.styles=o.styles||{}; state.tilts=o.tilts||{}; }
+function planSnapshot(){ return {layouts:state.layouts, deletedExisting:state.deletedExisting, viewpoints:state.viewpoints, seededPins:state.seededPins, styles:state.styles, tilts:state.tilts, constraints:state.constraints}; }
+function applyPlan(o){ if(!o)return; state.layouts=o.layouts||{}; state.deletedExisting=o.deletedExisting||[]; state.viewpoints={...DEFAULT_VP, ...(o.viewpoints||{})}; state.seededPins=o.seededPins||[]; state.styles=o.styles||{}; state.tilts=o.tilts||{}; state.constraints=o.constraints||{}; }
 
 function save(){ try{ localStorage.setItem('gardenPlan16', JSON.stringify(planSnapshot())); }catch(e){} }
 function load(){ try{
@@ -1600,6 +1600,7 @@ function renderDetail(){
         <div class="designs">
         <div class="cap"><span>Suggested designs</span><span class="caprt"><button class="btn ghost" id="resetBed">Reset to suggestion</button></span></div>
         <div class="stylepick" id="stylepick"></div>
+        <div class="convo" id="convo"></div>
         </div>
         <div class="svgwrap"><svg class="schem" id="schem"></svg></div>
         <div class="cap hint2"><span>Drag plants to arrange them${bed.multi?' — they move freely between both beds':''}</span></div>
@@ -1638,6 +1639,7 @@ function renderDetail(){
   };
   renderBedPanelSaves(bed);
   renderStylePicker(bed);
+  renderConvo(bed);
   // The plant palette lives in a centered modal (issue #47) instead of an inline
   // popover, so it gets full room and isn't clipped by the panel.
   panel.querySelector('#addtrigger').onclick=()=>openAddPlant(bed);
@@ -1693,6 +1695,149 @@ function renderStylePicker(bed){
 function applyStyle(bed,style){
   state.layouts[bed.id]=styleLayout(bed,style); state.styles[bed.id]=style;
   sel.plant=null; sel.editing=null; save(); renderDetail();
+}
+
+// ---- Conversational design (issue 37) — preview / apply / revert ------------
+// A typed request is parsed into a constraints object (locally for now — the LLM
+// proxy replaces parseRequestLocal later), which constrainedPalette turns into a
+// candidate planting. The candidate is shown as a PREVIEW (state.layouts is swapped
+// but NOT saved) with a backup kept, so Apply commits and Revert restores. Requests
+// persist per bed in state.constraints so later regenerations keep honouring them.
+const convo={};   // bed.id -> {text, constraints, note, backup, empty}
+const CAT_WORDS={grass:'Grass',grasses:'Grass',fern:'Fern',ferns:'Fern',shrub:'Shrub',shrubs:'Shrub',bush:'Shrub',bushes:'Shrub',tree:'Tree',trees:'Tree',vine:'Vine',vines:'Vine',groundcover:'Groundcover',perennial:'Perennial',perennials:'Perennial',herb:'Herb',herbs:'Herb'};
+// Index for matching plant names in a request. `spec` matches ONE plant (its id,
+// its display name, and the space-stripped name — all word-boundary matched so
+// "coneflowers" hits coneflower but "oakleaf" never hits oak). `groups` maps a
+// shared last word ("hydrangea", "milkweed", "aster") to every plant that carries
+// it, so "no hydrangeas" drops both hydrangeas — but generic suffixes (flower,
+// grass, fern…) are stop-listed so "swap the coneflowers" doesn't nuke every
+// *-flower. Category words (grasses, ferns) are handled separately via CAT_WORDS.
+const NAME_STOP=new Set(['flower','flowers','grass','grasses','fern','ferns','tree','trees','vine','vines','plant','plants','bush','bushes','shrub','shrubs','herb','herbs','sedge','berry','root','wort']);
+const reEsc=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+let _plantIdx=null;
+function plantIndex(){ if(_plantIdx)return _plantIdx; const spec={}, groups={};
+  Object.keys(PLANTS).forEach(pid=>{ const name=(PLANTS[pid].name||'').toLowerCase();
+    spec[pid]=[pid.toLowerCase(),name,name.replace(/\s+/g,'')].filter((v,i,a)=>v&&a.indexOf(v)===i);
+    const last=name.split(/\s+/).pop();
+    if(last&&last.length>=4&&!NAME_STOP.has(last))(groups[last]=groups[last]||[]).push(pid); });
+  return _plantIdx={spec,groups}; }
+function namedPlants(t){ const {spec,groups}=plantIndex(), out=new Set();
+  Object.keys(spec).forEach(pid=>{ if(spec[pid].some(k=>new RegExp('\\b'+reEsc(k)+'s?\\b').test(t))) out.add(pid); });
+  Object.keys(groups).forEach(g=>{ if(new RegExp('\\b'+g+'s?\\b').test(t)) groups[g].forEach(pid=>out.add(pid)); });
+  return Array.from(out); }
+// Deterministic fallback parser — covers the concrete requests in the issue. The
+// LLM layer handles open-ended phrasing; anything this can't map is flagged in `note`.
+function parseRequestLocal(text){
+  const t=(text||'').toLowerCase(); const c={}; let note='';
+  const has=re=>re.test(t);
+  const low=has(/low(?:er)?[\s-]?maintenance|low(?:er)?[\s-]?upkeep|less work|easy[\s-]?care|carefree|drought[\s-]?tolerant|\bhardy\b|\btough\b/);
+  if(low) c.lowMaintenance=true;
+  // named plants → exclude (on a removal/swap cue) or require (on a keep/add cue)
+  const named=namedPlants(t);
+  const exclCue=has(/\b(no|not|without|remove|drop|get rid|don'?t want|dont want|less|fewer|swap|replace|instead of|other than|rid of)\b/);
+  const inclCue=has(/\b(keep|add|include|want more|more of|bring back|with the)\b/);
+  named.forEach(pid=>{ if(exclCue&&!inclCue){(c.exclude=c.exclude||[]).push(pid);} else if(inclCue){(c.require=c.require||[]).push(pid);} else {(c.exclude=c.exclude||[]).push(pid);} });
+  // categories, only meaningful as an exclusion (no "requireCat" lever)
+  if(exclCue) Object.keys(CAT_WORDS).forEach(w=>{ if(new RegExp('\\b'+w+'\\b').test(t)){(c.excludeCat=c.excludeCat||[]);if(!c.excludeCat.includes(CAT_WORDS[w]))c.excludeCat.push(CAT_WORDS[w]);} });
+  // height
+  let m;
+  if(m=t.match(/under\s+(\d+(?:\.\d+)?)\s*(feet|foot|ft|'|inches|inch|in|")/)){const v=parseFloat(m[1]);c.maxHeightFt=/in|"/.test(m[2])?v/12:v;}
+  else if(has(/knee[\s-]?high/)) c.maxHeightFt=2;
+  else if(has(/waist[\s-]?high/)) c.maxHeightFt=3.5;
+  else if(has(/ankle[\s-]?high|very low|ground[\s-]?hugging/)) c.maxHeightFt=0.75;
+  else if(has(/\b(low|short)\b/)&&!low&&!has(/light/)) c.maxHeightFt=2;
+  // light
+  if(has(/full sun|sunny|lots of sun|sun[\s-]?loving/)) c.light='sun';
+  else if(has(/part shade|part sun|dappled|partial|semi[\s-]?shade/)) c.light='part sun';
+  else if(has(/shade|shady/)) c.light='shade';
+  // colour (first named)
+  for(const [w,v] of [['blue','blue'],['purple','purple'],['violet','purple'],['lavender-colou','purple'],['pink','pink'],['red','red'],['crimson','red'],['orange','orange'],['yellow','yellow'],['gold','yellow'],['white','white']]){ if(t.includes(w)){c.color=v;break;} }
+  // native / pollinator / style bias
+  if(has(/non[\s-]?native|exotic/)) c.nativeOnly=false; else if(has(/\bnative/)) c.nativeOnly=true;
+  if(has(/pollinator|bees|butterfl|nectar|more flower|more bloom|for the birds|hummingbird/)) (c.boost=c.boost||[]).push('pollinator');
+  const styleWord=[['meadow','meadow'],['coastal','coastal'],['seaside','coastal'],['shore','coastal'],['cottage','cottage'],['romantic','cottage'],['cutting','cottage'],['woodland','woodland'],['forest','woodland'],['foliage','foliage'],['textur','foliage'],['grassy','foliage']].find(([w])=>t.includes(w));
+  if(styleWord) c.style=styleWord[1];
+  else if(has(/colou?rful|more colou?r|lots of colou?r|vibrant|showy|bright/)) c.style='cottage';   // "more colour" → the showy cottage palette
+  // unsupported asks — plant selection can't change beds' shape/layout/hardscape
+  if(has(/\b(pond|water feature|fountain|bench|seat|patio|path|walkway|stepping|fence|wall|rock|boulder|gravel|mulch|hardscape|lawn|arbor|trellis|lighting)\b/))
+    note+='I can change which plants are in the bed, but not its shape, layout, or hardscape (paths, water, seating). ';
+  if(has(/\b(left|right)\b.*\bside\b|on the (left|right)|tall.*(back|front)|\bmove (it|the|them)\b|rearrange|reshape|bigger bed|smaller bed/))
+    note+='I choose placement by design principles (tall to the back, drifts, repetition) — I can’t take left/right or spot instructions yet. ';
+  if(!hasConstraints(c)&&!note) note='I didn’t catch a change I can make — try naming a plant to drop, a height like “under 2 ft”, a colour, “more pollinators”, “shade-loving”, or “lower-maintenance”.';
+  return {constraints:c, note};
+}
+function hasConstraints(c){return !!c&&((c.exclude&&c.exclude.length)||(c.excludeCat&&c.excludeCat.length)||(c.require&&c.require.length)||c.maxHeightFt!=null||c.light||c.color||(c.boost&&c.boost.length)||c.lowMaintenance||c.nativeOnly===false||c.style);}
+function mergeConstraints(a,b){a=a||{};b=b||{};const uni=(x,y)=>Array.from(new Set([...(x||[]),...(y||[])]));
+  return {exclude:uni(a.exclude,b.exclude), excludeCat:uni(a.excludeCat,b.excludeCat), require:uni(a.require,b.require),
+    nativeOnly:b.nativeOnly!==undefined?b.nativeOnly:a.nativeOnly, maxHeightFt:b.maxHeightFt!=null?b.maxHeightFt:a.maxHeightFt,
+    light:b.light||a.light, color:b.color||a.color, boost:uni(a.boost,b.boost),
+    lowMaintenance:b.lowMaintenance!==undefined?b.lowMaintenance:a.lowMaintenance, style:b.style||a.style};}
+function describeConstraints(c){const p=[];const nm=pid=>PLANTS[pid]?PLANTS[pid].name:pid;
+  if(c.exclude&&c.exclude.length)p.push('no '+c.exclude.map(nm).join(', '));
+  if(c.excludeCat&&c.excludeCat.length)p.push('less '+c.excludeCat.map(x=>x.toLowerCase()).join(' & '));
+  if(c.require&&c.require.length)p.push('keep '+c.require.map(nm).join(', '));
+  if(c.maxHeightFt!=null)p.push('under '+c.maxHeightFt+' ft');
+  if(c.light)p.push(c.light+'-tolerant');
+  if(c.color)p.push(c.color+' flowers');
+  if(c.boost&&c.boost.includes('pollinator'))p.push('more pollinators');
+  if(c.lowMaintenance)p.push('lower-maintenance');
+  if(c.nativeOnly===false)p.push('non-natives allowed');
+  if(c.style)p.push((STYLES[c.style]?STYLES[c.style].name.toLowerCase():c.style)+' feel');
+  return p.join('; ');}
+// A candidate planting for a constraints set (mirrors styleLayout: keep the bed's
+// stationary existing plants, design the rest).
+function candidateLayout(bed,c){const keep=(state.layouts[bed.id]||[]).filter(p=>p.exist);return [...keep, ...defaultLayout(bed, constrainedPalette(bed,c))];}
+function runRequest(bed,text){const parsed=parseRequestLocal(text);const st=convo[bed.id];
+  const base=(st&&st.backup)?st.constraints:state.constraints[bed.id];   // iterate on a pending preview, else on what's saved
+  previewConstraints(bed,base,parsed.constraints,text,parsed.note);}
+function previewConstraints(bed,base,fresh,text,note){
+  const st=convo[bed.id]||(convo[bed.id]={});
+  if(!st.backup)st.backup=JSON.parse(JSON.stringify(state.layouts[bed.id]||[]));   // first preview snapshots the committed layout
+  const merged=mergeConstraints(base,fresh); st.constraints=merged; st.text=text; st.note=note;
+  const cand=candidateLayout(bed,merged); st.empty=cand.filter(p=>!p.exist).length===0;
+  state.layouts[bed.id]=cand; sel.plant=null; sel.editing=null; renderDetail();   // preview only — NOT saved
+}
+function applyConstraints(bed){const st=convo[bed.id];if(!st||!st.backup)return;
+  state.constraints[bed.id]=st.constraints; st.backup=null;   // commit + persist for future regens
+  save(); toast('Design updated'+(describeConstraints(st.constraints)?' — '+describeConstraints(st.constraints):'')+'.'); renderDetail();}
+function revertConstraints(bed){const st=convo[bed.id];if(!st||!st.backup)return;
+  state.layouts[bed.id]=st.backup; st.backup=null; st.note=''; save(); renderDetail();}
+// The "describe a change" box under the design picker.
+function renderConvo(bed){
+  const host=document.getElementById('convo'); if(!host)return;
+  const st=convo[bed.id]||{}, pending=!!st.backup, persisted=state.constraints[bed.id];
+  host.innerHTML='';
+  const wrap=document.createElement('div'); wrap.className='convobox'; wrap.style.marginTop='10px';
+  const cap=document.createElement('div'); cap.className='cap'; cap.innerHTML='<span>Or describe a change in your own words</span>'; wrap.appendChild(cap);
+  const row=document.createElement('div'); row.style.cssText='display:flex;gap:6px;margin-top:4px';
+  const inp=document.createElement('input'); inp.type='text'; inp.id='convoInput';
+  inp.placeholder=pending?'Refine it — e.g. “more colour”, “add a shrub”':'e.g. “no hydrangeas, under 2 ft, more pollinators”';
+  inp.style.cssText='flex:1;padding:7px 9px;border:1px solid #cfc9bf;border-radius:7px;font:inherit;min-width:0';
+  const go=document.createElement('button'); go.type='button'; go.className='btn'; go.textContent='Generate';
+  row.appendChild(inp); row.appendChild(go); wrap.appendChild(row);
+  const submit=()=>{const v=inp.value.trim(); if(v)runRequest(bed,v);};
+  go.onclick=submit; inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();submit();}});
+  if(!pending&&hasConstraints(persisted)){
+    const a=document.createElement('div'); a.className='convonote'; a.style.cssText='margin-top:6px;font-size:13px;color:#5c554a';
+    a.innerHTML='<b>Active for this bed:</b> '+describeConstraints(persisted)+' ';
+    const clr=document.createElement('button'); clr.type='button'; clr.className='btn ghost'; clr.textContent='Clear'; clr.style.marginLeft='6px';
+    clr.onclick=()=>{delete state.constraints[bed.id]; save(); renderDetail();};
+    a.appendChild(clr); wrap.appendChild(a);
+  }
+  if(pending){
+    const note=document.createElement('div'); note.className='convonote'; note.style.cssText='margin-top:8px;font-size:13px;line-height:1.4;color:#3c372f';
+    let msg = st.empty ? '<b>That left nothing to plant.</b> Try loosening the request.'
+                       : '<b>Preview:</b> '+(describeConstraints(st.constraints)||'a fresh design')+'.';
+    if(st.note) msg+=' <span style="color:#8a5a1e">'+st.note+'</span>';
+    note.innerHTML=msg; wrap.appendChild(note);
+    const btns=document.createElement('div'); btns.style.cssText='margin-top:8px;display:flex;gap:6px';
+    const apply=document.createElement('button'); apply.type='button'; apply.className='btn'; apply.textContent='✓ Apply'; apply.disabled=!!st.empty;
+    const rev=document.createElement('button'); rev.type='button'; rev.className='btn ghost'; rev.textContent='↩ Revert';
+    apply.onclick=()=>applyConstraints(bed); rev.onclick=()=>revertConstraints(bed);
+    btns.appendChild(apply); btns.appendChild(rev); wrap.appendChild(btns);
+  }
+  host.appendChild(wrap);
+  if(pending) setTimeout(()=>{const i=document.getElementById('convoInput'); if(i)i.focus();},0);
 }
 
 // ---- Per-bed rotation for the schematic ("circle bed") view ----
