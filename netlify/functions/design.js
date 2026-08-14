@@ -55,7 +55,8 @@ Field meaning:
 - light: 'sun' | 'part sun' | 'shade' if they call for a light level, else null.
 - color: a single flower colour if they ask for one, else null. "more colour"/"colourful" is NOT a colour — leave color null and set style:"cottage".
 - lowMaintenance: true for "low-maintenance / easy / tough / drought-tolerant", else null.
-- style: one of ${STYLE_KEYS.join(', ')} if they evoke that feel (meadow, seaside/coastal, shrub-anchored, woodland, cottage/cutting/romantic/colourful, foliage/texture), else null.
+- style: one of ${STYLE_KEYS.join(', ')} if they evoke that feel (meadow, seaside/coastal, shrub-anchored, woodland, cottage/cutting/romantic/colourful, foliage/texture), else null. A vague quality request with no other signal ("make it prettier / nicer / better / more beautiful / more colourful") should set style:"cottage" (the showiest, most colourful palette) — never leave the whole object empty for those.
+- Never add trees; the tool won't plant a new specimen tree. If they ask for a tree, note it in "unsupported".
 - unsupported: a short friendly sentence for ANY part of the request the tool can't do — it only chooses which plants go in the bed. It CANNOT change the bed's shape or size, add hardscape (paths, water, benches, fences, lighting), place plants at specific spots (left/right/"in the corner"), or add plants that aren't in the catalog. Leave "" if everything was expressible.
 
 Be conservative: only set fields the user actually asked for. Leave arrays empty and scalars null otherwise.`;

@@ -1419,6 +1419,7 @@ function constrainedPalette(bed,c){
   const nativeOnly=c.nativeOnly!==false;               // native by default (tool ethos)
   const passes=pid=>{const p=PLANTS[pid]; if(!p||GEN_EXCLUDE.has(pid))return false;
     if(excl.has(pid)||exclCat.has(p.cat))return false;
+    if(p.cat==='Tree'&&!req.has(pid))return false;       // don't drop a new specimen tree into a bed unless explicitly asked
     if(!lightOK(pid,lvl)||p.deer==='Often browsed')return false;
     if(nativeOnly&&!p.naNative)return false;
     if(c.maxHeightFt!=null&&plantHt(pid)>c.maxHeightFt)return false;
@@ -1757,7 +1758,7 @@ function parseRequestLocal(text){
   if(has(/pollinator|bees|butterfl|nectar|more flower|more bloom|for the birds|hummingbird/)) (c.boost=c.boost||[]).push('pollinator');
   const styleWord=[['meadow','meadow'],['coastal','coastal'],['seaside','coastal'],['shore','coastal'],['cottage','cottage'],['romantic','cottage'],['cutting','cottage'],['woodland','woodland'],['forest','woodland'],['foliage','foliage'],['textur','foliage'],['grassy','foliage']].find(([w])=>t.includes(w));
   if(styleWord) c.style=styleWord[1];
-  else if(has(/colou?rful|more colou?r|lots of colou?r|vibrant|showy|bright/)) c.style='cottage';   // "more colour" → the showy cottage palette
+  else if(has(/colou?rful|more colou?r|lots of colou?r|vibrant|showy|bright|prettier|prettiest|nicer|lovelier|more beautiful|spruce|jazz|liven|make it (better|nicer|prettier|pop)/)) c.style='cottage';   // "more colour" / vague "make it prettier" → the showy cottage palette
   // unsupported asks — plant selection can't change beds' shape/layout/hardscape
   if(has(/\b(pond|water feature|fountain|bench|seat|patio|path|walkway|stepping|fence|wall|rock|boulder|gravel|mulch|hardscape|lawn|arbor|trellis|lighting)\b/))
     note+='I can change which plants are in the bed, but not its shape, layout, or hardscape (paths, water, seating). ';
@@ -1809,6 +1810,13 @@ async function runRequest(bed,text){
   let parsed=await callProxy(text,bed);
   if(!parsed){ parsed=parseRequestLocal(text);
     if(localStorage.getItem(CONVO_PW_KEY)) parsed.note=(parsed.note?parsed.note+' ':'')+'(AI service unavailable — used the built-in parser.)'; }
+  // A request that maps to no concrete change (e.g. "make it better") must NOT
+  // regenerate — that would wipe the current design for nothing. Say so and stop.
+  if(!hasConstraints(parsed.constraints)){
+    toast(parsed.note||'I didn’t catch a change I can make — try naming a plant, a height, a colour, or “more pollinators”.');
+    renderDetail();                                     // reset the busy row; leave the planting untouched
+    return;
+  }
   previewConstraints(bed,base,parsed.constraints,text,parsed.note);
 }
 function previewConstraints(bed,base,fresh,text,note){
