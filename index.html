@@ -355,11 +355,6 @@ g.vpmark.active .vparm{stroke-width:5}
 
 /* ---- Detail ---- */
 #detail{margin-top:18px}
-.empty{
-  border:1px dashed var(--line2);border-radius:14px;padding:30px 24px;text-align:center;
-  color:var(--muted);background:var(--paper2)
-}
-.empty b{color:var(--ink);font-weight:600}
 .panel{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow:hidden;
   border-top:4px solid var(--bc)}
 .phead{display:flex;align-items:flex-start;gap:14px;padding:18px 20px 14px;border-bottom:1px solid var(--line)}
@@ -674,9 +669,7 @@ body.orbiting svg.elev,body.orbiting{cursor:grabbing}
   <aside id="listcol" class="listcol"></aside>
   </div>
 
-  <section id="detail">
-    <div class="empty"><b>No bed selected yet.</b><br>Tap any colored bed on the plan to start planting.</div>
-  </section>
+  <section id="detail"></section>
   </div>
 
   <footer>Hand measurements are approximate. Plant suggestions are starting points — pick what grows well for you. Native-plant picks and design ideas draw on the Association to Preserve Cape Cod (APCC) Native Plant Initiative and CapeCodNativePlants.org.</footer>
