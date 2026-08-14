@@ -140,17 +140,36 @@ header.top .topacts{margin-left:auto;align-self:center;display:flex;gap:8px;flex
 /* Reliable empty box in print, independent of form-control print quirks */
 @media print{
   .rp-cb{-webkit-appearance:none;appearance:none;width:12px;height:12px;border:1.4px solid #6c7163;border-radius:3px;background:#fff}
+  /* Show the owned count as plain text, no editable-field chrome, on the sheet */
+  .rp-own{-webkit-appearance:none;appearance:none;-moz-appearance:textfield;border:none;background:none;width:auto;padding:0;text-align:left;font-weight:600}
+  .rp-own::-webkit-inner-spin-button,.rp-own::-webkit-outer-spin-button{-webkit-appearance:none;display:none}
 }
 .rp-tbl td.pn b{font-weight:600}
 .rp-tbl td.pn i{color:var(--muted);font-size:11.5px;margin-left:6px}
+/* "I already have" controls on the shopping list (issue #49) */
+.rp-tbl th.rp-haveh{white-space:nowrap}
+.rp-tbl td.rp-have{width:1%;white-space:nowrap}
+.rp-own{width:3.4em;font:inherit;font-size:12.5px;text-align:center;padding:2px 4px;border:1px solid var(--line);border-radius:6px;background:#fff;color:inherit;font-variant-numeric:tabular-nums}
+.rp-buyq .rp-need{font-weight:400;color:var(--muted);font-size:11px;margin-left:4px}
+.rp-havebox{margin-top:14px}
+.rp-havehd{font-size:12.5px!important;font-weight:600;color:var(--muted);margin:0 0 4px!important}
+.rp-havetbl td,.rp-havetbl th{color:var(--muted)}
+.rp-havetbl td.pn b{font-weight:600;color:var(--muted)}
+/* Brief "got it" highlight before a covered row settles into the have block */
+.rp-shop tr.rp-leaving{background:#eef5ea;transition:background .3s ease}
+.rp-shop tr.rp-leaving td{color:#5c6a48}
+.rp-shop tr.rp-leaving .rp-need{color:#4e6840;font-style:normal;font-weight:600}
 .rp-tag{font-size:11px;color:var(--muted);font-style:italic}
 .rp .rp-bedblurb{font-size:12.5px;color:var(--ink);margin:0 0 8px;max-width:70ch;line-height:1.45}
 .rp .rp-bedtip{font-size:12px;color:var(--ink);margin:0 0 9px;max-width:72ch;line-height:1.5;background:#f3f6ee;border-left:3px solid #cbe4d3;border-radius:0 6px 6px 0;padding:7px 10px}
 .rp .rp-bedtip b{color:#2f6b43}
 .rp-map{margin:2px 0 12px;text-align:center}
-.rp-map .rp-mapfig{display:inline-block;border:1px solid var(--line);border-radius:9px;padding:10px;background:#fcfdfb;max-width:100%}
+.rp-map .rp-mapfig{position:relative;display:inline-block;border:1px solid var(--line);border-radius:9px;padding:10px 54px 10px 10px;background:#fcfdfb;max-width:100%}
 .rp-map .rp-mapsvg{display:block;height:230px;width:auto;max-width:100%;margin:0 auto}
 .rp-map .rp-mapcap{margin:7px auto 0;font-size:10.5px;color:var(--muted);text-align:center;font-style:italic;max-width:32em}
+/* Fixed-size north compass, same size + corner offset on every bed map (#49) */
+.rp-map .rp-compass{position:absolute;top:12px;right:8px;width:40px;height:40px}
+.rp-map .rp-compass-svg{display:block;width:100%;height:100%}
 .rp-key{display:inline-block;min-width:1.7em;text-align:center;font-size:9.5px;font-weight:700;color:#fff;background:#6f8f5c;border-radius:5px;padding:1px 4px;letter-spacing:.02em}
 .rp-tbl td.q .rp-keyq{color:var(--ink);font-weight:600;margin-left:5px}
 .rp-tbl td.rp-tip{font-size:12px;color:var(--ink);line-height:1.4;white-space:normal;min-width:15em}
@@ -770,14 +789,16 @@ const DEFAULT_VP={
 };
 // state.styles: which suggested design (see STYLES) is active per bed — persisted
 // so a returning user keeps the scheme they picked. Absent → 'designer' (RECS).
-let state={layouts:{}, deletedExisting:[], viewpoints:{...DEFAULT_VP}, seededPins:[], styles:{}, tilts:{}}, sel={bed:null, plant:null, editing:null};
+// state.owned: pid -> how many of that plant the user already has (subtracted
+// from the shopping list, issue #49). Global across the plan — you own N total.
+let state={layouts:{}, deletedExisting:[], viewpoints:{...DEFAULT_VP}, seededPins:[], styles:{}, tilts:{}, owned:{}}, sel={bed:null, plant:null, editing:null};
 let placingVP=null, vpDrag=null;   // viewpoint placement / drag state
 let justPlacedVP=null;             // last ✕ just dropped — lets a double-click on a bed undo it
 
 // A plan snapshot = everything that makes one arrangement distinct. Used by the
 // auto-save, the named saves, and the shareable link so all three stay in sync.
-function planSnapshot(){ return {layouts:state.layouts, deletedExisting:state.deletedExisting, viewpoints:state.viewpoints, seededPins:state.seededPins, styles:state.styles, tilts:state.tilts}; }
-function applyPlan(o){ if(!o)return; state.layouts=o.layouts||{}; state.deletedExisting=o.deletedExisting||[]; state.viewpoints={...DEFAULT_VP, ...(o.viewpoints||{})}; state.seededPins=o.seededPins||[]; state.styles=o.styles||{}; state.tilts=o.tilts||{}; }
+function planSnapshot(){ return {layouts:state.layouts, deletedExisting:state.deletedExisting, viewpoints:state.viewpoints, seededPins:state.seededPins, styles:state.styles, tilts:state.tilts, owned:state.owned}; }
+function applyPlan(o){ if(!o)return; state.layouts=o.layouts||{}; state.deletedExisting=o.deletedExisting||[]; state.viewpoints={...DEFAULT_VP, ...(o.viewpoints||{})}; state.seededPins=o.seededPins||[]; state.styles=o.styles||{}; state.tilts=o.tilts||{}; state.owned=o.owned||{}; }
 
 function save(){ try{ localStorage.setItem('gardenPlan16', JSON.stringify(planSnapshot())); }catch(e){} }
 function load(){ try{
@@ -1004,13 +1025,70 @@ function growTip(pid){
   if(/often browsed/i.test(p.deer||'')) parts.push('Protect from deer.');
   return parts.join(' ')||'—';
 }
+// Best-fit orientation for a bed's report map. We rotate the outline so its
+// minimum-area bounding rectangle is axis-aligned (fills the frame instead of
+// sitting at an awkward diagonal), prefer a landscape box, and of the two
+// remaining flips keep north (plan-space up) pointing generally upward. A
+// compass in the map corner then shows exactly where north lands. (#49 follow-up)
+function convexHull(P){
+  const pts=P.map(p=>[p[0],p[1]]).sort((a,b)=>a[0]-b[0]||a[1]-b[1]);
+  if(pts.length<3) return pts;
+  const cross=(o,a,b)=>(a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0]);
+  const lo=[]; for(const p of pts){ while(lo.length>=2&&cross(lo[lo.length-2],lo[lo.length-1],p)<=0)lo.pop(); lo.push(p); }
+  const up=[]; for(let i=pts.length-1;i>=0;i--){ const p=pts[i]; while(up.length>=2&&cross(up[up.length-2],up[up.length-1],p)<=0)up.pop(); up.push(p); }
+  lo.pop(); up.pop(); return lo.concat(up);
+}
+function bedFitAngle(outline){
+  const h=convexHull(outline); if(h.length<3) return 0;
+  let best=0,bestArea=Infinity,bw=0,bh=0;
+  for(let i=0;i<h.length;i++){
+    const a=h[i],b=h[(i+1)%h.length];
+    const ang=Math.atan2(b[1]-a[1],b[0]-a[0]);
+    const c=Math.cos(-ang),s=Math.sin(-ang);
+    let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;
+    for(const p of h){ const x=p[0]*c-p[1]*s,y=p[0]*s+p[1]*c;
+      if(x<x0)x0=x; if(y<y0)y0=y; if(x>x1)x1=x; if(y>y1)y1=y; }
+    const w=x1-x0,ht=y1-y0,area=w*ht;
+    if(area<bestArea-1e-9){ bestArea=area; best=-ang; bw=w; bh=ht; }
+  }
+  let R=best;
+  if(bh>bw) R+=Math.PI/2;              // landscape: wider than tall
+  if(Math.cos(R)<0) R+=Math.PI;        // keep north pointing up-ish
+  return R;
+}
+// The rotation a bed's report map is drawn at — shared by the map and its
+// compass so the needle matches the drawing exactly.
+function bedMapAngle(bed){ return (bed&&bed.polygons)?bedFitAngle([].concat(...polysFt(bed))):0; }
+// A small, understated north compass as a self-contained, fixed-size SVG (a
+// 100-unit square scaled by CSS), so it renders identically on every bed map
+// regardless of that bed's scale. `R` is the angle the map was turned by, so
+// north (plan-space up = (0,-1)) now points along (sin R, -cos R); we spin a
+// slim surveyor's needle to match and keep the "N" upright.
+function compassSVG(R){
+  const cx=50,cy=52,rr=27, deg=(R*180/Math.PI).toFixed(2), f2=n=>(+n).toFixed(2);
+  const nT=rr*0.70, sT=rr*0.52, w=rr*0.10;                       // needle: north tip, south tail, half-width
+  const nx=cx+Math.sin(R)*rr*1.34, ny=cy-Math.cos(R)*rr*1.34;   // upright "N" just outside the ring at the tip
+  return `<svg class="rp-compass-svg" viewBox="0 0 100 100" aria-hidden="true">`
+    +`<circle cx="${cx}" cy="${cy}" r="${rr}" fill="#fff" fill-opacity="0.9" stroke="#7d8a66" stroke-opacity="0.6" stroke-width="1.3"/>`
+    +`<g transform="rotate(${deg} ${cx} ${cy})">`
+    +`<polygon points="${cx},${f2(cy-nT)} ${f2(cx+w)},${cy} ${f2(cx-w)},${cy}" fill="#2f3327"/>`
+    +`<polygon points="${cx},${f2(cy+sT)} ${f2(cx+w)},${cy} ${f2(cx-w)},${cy}" fill="#b7bfa4"/>`
+    +`<circle cx="${cx}" cy="${cy}" r="${f2(rr*0.09)}" fill="#fff" stroke="#2f3327" stroke-width="1"/>`
+    +`</g>`
+    +`<text x="${f2(nx)}" y="${f2(ny)}" font-size="${f2(rr*0.5)}" font-family="Inter" font-weight="700" fill="#2f3327" text-anchor="middle" dominant-baseline="central">N</text>`
+    +`</svg>`;
+}
 // A static, top-down planting map for the report — same feet-space geometry,
 // plant sizing, colours and abbreviations as the live schematic (renderSchem),
-// but emitted as a self-contained SVG string that prints. Orientation is fixed
-// north-up (no viewpoint rotation) so the printed map is stable.
+// emitted as a self-contained SVG string that prints. Each bed is turned to its
+// best-fit orientation (bedFitAngle) and carries a compass so north stays clear.
 function bedPlanSVG(bed,layout){
   if(!bed||!bed.polygons) return '';
-  const polys=polysFt(bed);
+  const polys0=polysFt(bed);
+  const R=bedMapAngle(bed);
+  const cR=Math.cos(R), sR=Math.sin(R);
+  const rot=(x,y)=>[x*cR-y*sR, x*sR+y*cR];
+  const polys=polys0.map(poly=>poly.map(p=>rot(p[0],p[1])));
   let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
   const eat=(x,y)=>{ if(x<minX)minX=x; if(y<minY)minY=y; if(x>maxX)maxX=x; if(y>maxY)maxY=y; };
   polys.forEach(p=>p.forEach(pt=>eat(pt[0],pt[1])));
@@ -1019,23 +1097,62 @@ function bedPlanSVG(bed,layout){
     if(!isFinite(it.x)||!isFinite(it.y)) return;
     const def=it.exist?existDef(it.eid):null;
     const r=it.exist?Math.max(0.55,((def&&def.r)||pl.spread)/2):plantRadius(pl.spread);
-    eat(it.x-r,it.y-r); eat(it.x+r,it.y+r); toks.push({it,pl,r}); });
+    const [tx,ty]=rot(it.x,it.y);
+    eat(tx-r,ty-r); eat(tx+r,ty+r); toks.push({it,pl,r,tx,ty}); });
   if(!isFinite(minX)) return '';
-  const m=0.4, vbW=(maxX-minX)+2*m, vbH=(maxY-minY)+2*m;
+  const m=0.4, ox=minX-m, oy=minY-m, vbW=(maxX-minX)+2*m, vbH=(maxY-minY)+2*m;
   const [wFt,hFt]=bedSizeFt(bed); const fs=Math.max(0.42,Math.min(wFt,hFt)*0.05);
   const bc=bed.color||'#8aa17a'; const f2=n=>(+n).toFixed(2);
-  let s=`<svg class="rp-mapsvg" viewBox="${f2(minX-m)} ${f2(minY-m)} ${f2(vbW)} ${f2(vbH)}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Planting map for ${escHtml(bed.name)}">`;
+  let s=`<svg class="rp-mapsvg" viewBox="${f2(ox)} ${f2(oy)} ${f2(vbW)} ${f2(vbH)}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Planting map for ${escHtml(bed.name)}; compass marks north">`;
   polys.forEach(poly=>{ s+=`<polygon points="${poly.map(p=>f2(p[0])+','+f2(p[1])).join(' ')}" fill="${bc}" fill-opacity="0.10" stroke="${bc}" stroke-opacity="0.85" vector-effect="non-scaling-stroke" stroke-width="1.5"/>`; });
-  toks.sort((a,b)=>(a.it.exist?0:1)-(b.it.exist?0:1)).forEach(({it,pl,r})=>{
+  toks.sort((a,b)=>(a.it.exist?0:1)-(b.it.exist?0:1)).forEach(({it,pl,r,tx,ty})=>{
     const tf=f2(Math.min(fs,r*0.95)), lab=escHtml(abbr(pl.name));
     if(it.exist){
-      s+=`<g transform="translate(${f2(it.x)},${f2(it.y)})"><circle r="${f2(r)}" fill="#8f9c7e" fill-opacity="0.14" stroke="#7d8a66" stroke-opacity="0.7" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" stroke-width="1.5"/><text font-size="${tf}" font-family="Inter" font-weight="700" fill="#5c6a48" text-anchor="middle" dominant-baseline="central">${lab}</text></g>`;
+      s+=`<g transform="translate(${f2(tx)},${f2(ty)})"><circle r="${f2(r)}" fill="#8f9c7e" fill-opacity="0.14" stroke="#7d8a66" stroke-opacity="0.7" stroke-dasharray="4 3" vector-effect="non-scaling-stroke" stroke-width="1.5"/><text font-size="${tf}" font-family="Inter" font-weight="700" fill="#5c6a48" text-anchor="middle" dominant-baseline="central">${lab}</text></g>`;
     } else {
       const fill=bloomCol(it)||pl.color||'#6f8f5c';
-      s+=`<g transform="translate(${f2(it.x)},${f2(it.y)})"><circle r="${f2(r)}" fill="${fill}" stroke="#fff" stroke-opacity="0.9" vector-effect="non-scaling-stroke" stroke-width="1.5"/><text font-size="${tf}" font-family="Inter" font-weight="700" fill="#fff" text-anchor="middle" dominant-baseline="central" paint-order="stroke">${lab}</text></g>`;
+      s+=`<g transform="translate(${f2(tx)},${f2(ty)})"><circle r="${f2(r)}" fill="${fill}" stroke="#fff" stroke-opacity="0.9" vector-effect="non-scaling-stroke" stroke-width="1.5"/><text font-size="${tf}" font-family="Inter" font-weight="700" fill="#fff" text-anchor="middle" dominant-baseline="central" paint-order="stroke">${lab}</text></g>`;
     }
   });
   return s+`</svg>`;
+}
+// How many of a plant the user already owns (issue #49) — subtracted from buy list.
+function ownedCount(pid){ const n=state.owned&&state.owned[pid]; return (isFinite(n)&&n>0)?Math.floor(n):0; }
+function setOwned(pid,n){ if(!state.owned)state.owned={}; n=Math.floor(n); if(!isFinite(n)||n<=0) delete state.owned[pid]; else state.owned[pid]=n; save(); }
+function rpRowMeta(pid){const p=PLANTS[pid]||{};return{name:p.name,sci:p.sci,cat:p.cat||'',ht:plantHt(pid)};}
+// The shopping list (issue #49): needed qty per species minus what the user
+// already owns. Rows fully covered by owned stock move to an "already have"
+// block. Rendered on its own (id=rpShop) so it can be re-rendered in place as
+// the "I already have" inputs change, without rebuilding the whole report.
+function shopSectionHTML(d){
+  const htTxt=ht=>`~${ht%1?ht.toFixed(1):ht} ft`;
+  const byCat=(a,b)=>{const ma=rpRowMeta(a.pid),mb=rpRowMeta(b.pid);return ma.cat.localeCompare(mb.cat)||ma.name.localeCompare(mb.name);};
+  const rows=Object.keys(d.buy).map(pid=>{const need=d.buy[pid],have=ownedCount(pid);return {pid,need,have,buy:Math.max(0,need-have)};}).sort(byCat);
+  const toBuy=rows.filter(r=>r.buy>0), covered=rows.filter(r=>r.buy<=0);
+  const buyTotal=toBuy.reduce((s,r)=>s+r.buy,0);
+  const haveInput=r=>`<input type="number" class="rp-own" min="0" value="${r.have}" data-pid="${escHtml(r.pid)}" aria-label="How many ${escHtml(rpRowMeta(r.pid).name)} you already have">`;
+  let h=`<section id="rpShop"><h2>Shopping list <span class="rp-count">${buyTotal} plant${buyTotal===1?'':'s'} to buy</span></h2>`;
+  if(toBuy.length){
+    h+=`<table class="rp-tbl rp-shop"><thead><tr><th class="rp-ck" aria-label="Got it"></th><th class="q">Buy</th><th>Plant</th><th>Type</th><th class="rp-haveh">I already have</th><th>Mature ht</th><th>Spacing</th></tr></thead><tbody>`;
+    h+=toBuy.map(r=>{const m=rpRowMeta(r.pid);
+      const qcell=r.have>0?`<b>${r.buy}×</b> <span class="rp-need">of ${r.need} needed</span>`:`<b>${r.buy}×</b>`;
+      return `<tr><td class="rp-ck"><input type="checkbox" class="rp-cb" aria-label="Bought ${escHtml(m.name)}"></td><td class="q rp-buyq">${qcell}</td><td class="pn"><b>${escHtml(m.name)}</b><i>${escHtml(m.sci)}</i></td><td>${escHtml(m.cat)}</td><td class="rp-have">${haveInput(r)}</td><td>${htTxt(m.ht)}</td><td>${escHtml(ocLabel(r.pid))}</td></tr>`;}).join('');
+    h+=`</tbody></table>`;
+  } else if(!rows.length){
+    h+=`<p class="rp-empty">No new plants to buy — everything selected already exists on site.</p>`;
+  } else {
+    h+=`<p class="rp-empty">Nothing to buy — you already have every plant this plan needs.</p>`;
+  }
+  // Plants the user owns enough of — listed but off the buy tally, with the
+  // control still present so a mistaken "have" count can be dialled back down.
+  if(covered.length){
+    h+=`<div class="rp-havebox"><h3 class="rp-havehd">Already have — not buying <span class="rp-count">${covered.length} plant${covered.length===1?'':'s'}</span></h3>`;
+    h+=`<table class="rp-tbl rp-shop rp-havetbl"><thead><tr><th>Plant</th><th>Type</th><th class="q">Need</th><th class="rp-haveh">I already have</th></tr></thead><tbody>`;
+    h+=covered.map(r=>{const m=rpRowMeta(r.pid);
+      return `<tr class="rp-covered"><td class="pn"><b>${escHtml(m.name)}</b><i>${escHtml(m.sci)}</i></td><td>${escHtml(m.cat)}</td><td class="q">${r.need}</td><td class="rp-have">${haveInput(r)}</td></tr>`;}).join('');
+    h+=`</tbody></table></div>`;
+  }
+  return h+`</section>`;
 }
 function reportHTML(units,title){
   if(!units||!units.length) return '<p class="rp-empty">Nothing selected to report on.</p>';
@@ -1044,8 +1161,6 @@ function reportHTML(units,title){
   const htTxt=ht=>`~${ht%1?ht.toFixed(1):ht} ft`;
   const byCat=(a,b)=>{const ma=rowMeta(a.pid),mb=rowMeta(b.pid);return ma.cat.localeCompare(mb.cat)||ma.name.localeCompare(mb.name);};
   const byHt=(a,b)=>plantHt(b.pid)-plantHt(a.pid)||byCat(a,b);   // tall → short (back → front)
-  const buyRows=Object.keys(d.buy).map(pid=>({pid,qty:d.buy[pid]})).sort(byCat);
-  const buyTotal=buyRows.reduce((s,r)=>s+r.qty,0);
   const label=units.length+' item'+(units.length>1?'s':'')+': '+units.map(u=>escHtml(u.name)).join(', ');
   const genDate=(()=>{try{return new Date().toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'});}catch(e){return '';}})();
   let h=`<div class="rp">
@@ -1053,15 +1168,8 @@ function reportHTML(units,title){
     <h1>${escHtml(title||'Planting & buying report')}</h1>
     <p class="rp-meta">${label}</p>
     ${genDate?`<p class="rp-gen">Generated ${escHtml(genDate)}</p>`:''}`;
-  // Section 1 — Shopping list (new plants only), deduped by species with size + spacing notes
-  h+=`<section><h2>Shopping list <span class="rp-count">${buyTotal} plant${buyTotal===1?'':'s'} to buy</span></h2>`;
-  if(buyRows.length){
-    h+=`<table class="rp-tbl rp-shop"><thead><tr><th class="rp-ck" aria-label="Got it"></th><th class="q">Qty</th><th>Plant</th><th>Type</th><th>Mature ht</th><th>Spacing</th></tr></thead><tbody>`;
-    h+=buyRows.map(r=>{const m=rowMeta(r.pid);
-      return `<tr><td class="rp-ck"><input type="checkbox" class="rp-cb" aria-label="Bought ${escHtml(m.name)}"></td><td class="q">${r.qty}×</td><td class="pn"><b>${escHtml(m.name)}</b><i>${escHtml(m.sci)}</i></td><td>${escHtml(m.cat)}</td><td>${htTxt(m.ht)}</td><td>${escHtml(ocLabel(r.pid))}</td></tr>`;}).join('');
-    h+=`</tbody></table>`;
-  } else h+=`<p class="rp-empty">No new plants to buy — everything selected already exists on site.</p>`;
-  h+=`</section>`;
+  // Section 1 — Shopping list: needed qty per species minus what the user owns (#49)
+  h+=shopSectionHTML(d);
   // Section 2 — Planting guide: per-bed instructions, ordered back(tall) → front(short)
   h+=`<section class="rp-beds rp-guide"><h2>Planting guide</h2>`;
   d.units.forEach(pb=>{
@@ -1073,7 +1181,9 @@ function reportHTML(units,title){
     h+=`<div class="rp-bed"><h3>${escHtml(pb.unit.name)}</h3>${meta?`<p class="rp-bedmeta">${meta}</p>`:''}`;
     if(pb.unit.blurb) h+=`<p class="rp-bedblurb">${escHtml(pb.unit.blurb)}</p>`;
     const map=bedPlanSVG(pb.unit.bed, pb.unit.layout);
-    if(map) h+=`<div class="rp-map"><div class="rp-mapfig">${map}<p class="rp-mapcap">Planting map — labels are the first letters of each plant; circles show mature spread.</p></div></div>`;
+    // Compass is a fixed-size overlay pinned to the figure's top-right corner
+    // (same size + offset on every bed), sitting clear of the plotted map. (#49)
+    if(map) h+=`<div class="rp-map"><div class="rp-mapfig"><span class="rp-compass">${compassSVG(bedMapAngle(pb.unit.bed))}</span>${map}<p class="rp-mapcap">Planting map — labels are the first letters of each plant; circles show mature spread. The compass marks north.</p></div></div>`;
     if(rows.length){
       h+=`<table class="rp-tbl"><thead><tr><th class="q">Key</th><th>Plant</th><th>Mature ht</th><th>Spacing</th><th>Light</th><th>Growing tips</th></tr></thead><tbody>`;
       h+=rows.map(r=>{const m=rowMeta(r.pid);const p=PLANTS[r.pid]||{};const q=r.newN+r.exN;
@@ -4121,8 +4231,45 @@ function buildReportView(){
   reportView.addEventListener('pointerdown',e=>{ if(e.target===reportView) closeReport(); });
   document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&reportView.classList.contains('show')) closeReport(); });
 }
-function showReport(units,title){ reportView.querySelector('#reportBody').innerHTML=reportHTML(units,title); reportView.classList.add('show'); }
-function closeReport(){ reportView.classList.remove('show'); }
+function showReport(units,title){ reportView._units=units; reportView.querySelector('#reportBody').innerHTML=reportHTML(units,title); wireShop(units); reportView.classList.add('show'); }
+// Wire the "I already have" inputs: on change, remember the owned count and
+// re-render just the shopping section (buy math + already-have split update).
+let shopLeaveTimer=null, shopLeaveClick=null;
+function clearShopLeave(){
+  if(shopLeaveTimer){ clearTimeout(shopLeaveTimer); shopLeaveTimer=null; }
+  if(shopLeaveClick){ document.removeEventListener('pointerdown',shopLeaveClick,true); shopLeaveClick=null; }
+}
+function wireShop(units){
+  const shop=reportView.querySelector('#rpShop'); if(!shop) return;
+  const rerender=()=>{ clearShopLeave(); const cur=reportView.querySelector('#rpShop'); if(!cur) return;
+    const wrap=document.createElement('div'); wrap.innerHTML=shopSectionHTML(reportData(units));
+    cur.replaceWith(wrap.firstElementChild); wireShop(units); };
+  shop.querySelectorAll('.rp-own').forEach(inp=>{
+    inp.onchange=()=>{
+      clearShopLeave();
+      let n=parseInt(inp.value,10); if(!isFinite(n)||n<0)n=0;
+      const pid=inp.dataset.pid;
+      setOwned(pid,n);
+      const d=reportData(units);
+      const need=d.buy[pid]||0, buy=Math.max(0,need-ownedCount(pid));
+      const row=inp.closest('tr');
+      // Row just became fully covered while still in the buy table — mark it
+      // "got it", update the tally, then hold before it settles into the
+      // "already have" block: up to 5 s, or as soon as the user clicks away.
+      if(row && !row.classList.contains('rp-covered') && need>0 && buy<=0){
+        const buyCell=row.querySelector('.rp-buyq'); if(buyCell) buyCell.innerHTML='<b>0×</b> <span class="rp-need">got it</span>';
+        const cnt=shop.querySelector('h2 .rp-count');
+        const total=Object.keys(d.buy).reduce((s,p)=>s+Math.max(0,d.buy[p]-ownedCount(p)),0);
+        if(cnt) cnt.textContent=`${total} plant${total===1?'':'s'} to buy`;
+        row.classList.add('rp-leaving');
+        shopLeaveTimer=setTimeout(rerender, 5000);
+        shopLeaveClick=e=>{ if(!row.contains(e.target)) rerender(); };
+        document.addEventListener('pointerdown',shopLeaveClick,true);
+      } else rerender();
+    };
+  });
+}
+function closeReport(){ clearShopLeave(); reportView.classList.remove('show'); }
 
 async function handleSharedLink(){
   const m=(location.hash||'').match(/^#plan=(.+)$/);
