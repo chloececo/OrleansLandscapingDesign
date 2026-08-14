@@ -1787,9 +1787,30 @@ function describeConstraints(c){const p=[];const nm=pid=>PLANTS[pid]?PLANTS[pid]
 // A candidate planting for a constraints set (mirrors styleLayout: keep the bed's
 // stationary existing plants, design the rest).
 function candidateLayout(bed,c){const keep=(state.layouts[bed.id]||[]).filter(p=>p.exist);return [...keep, ...defaultLayout(bed, constrainedPalette(bed,c))];}
-function runRequest(bed,text){const parsed=parseRequestLocal(text);const st=convo[bed.id];
-  const base=(st&&st.backup)?st.constraints:state.constraints[bed.id];   // iterate on a pending preview, else on what's saved
-  previewConstraints(bed,base,parsed.constraints,text,parsed.note);}
+// Ask the Netlify proxy (Claude) to parse the request. Returns null on any problem
+// (no password set, offline, proxy/API error) so the caller falls back to the local
+// keyword parser — so the box works today and upgrades to the LLM once the proxy is
+// live and the password is entered. Password is stored locally, entered once.
+const CONVO_PW_KEY='orleansDesignPw';
+async function callProxy(text,bed){
+  const pw=localStorage.getItem(CONVO_PW_KEY); if(!pw)return null;
+  try{
+    const res=await fetch('/.netlify/functions/design',{method:'POST',
+      headers:{'content-type':'application/json','x-app-password':pw},
+      body:JSON.stringify({prompt:text, bedLight:bed.light})});
+    if(!res.ok)return null;
+    const c=await res.json(); if(!c||typeof c!=='object'||c.error)return null;
+    const {unsupported, ...rest}=c;                    // unsupported is a note, not a palette field
+    return {constraints:rest, note:unsupported||''};
+  }catch(e){return null;}
+}
+async function runRequest(bed,text){
+  const st=convo[bed.id]; const base=(st&&st.backup)?st.constraints:state.constraints[bed.id];   // iterate on a pending preview, else on what's saved
+  let parsed=await callProxy(text,bed);
+  if(!parsed){ parsed=parseRequestLocal(text);
+    if(localStorage.getItem(CONVO_PW_KEY)) parsed.note=(parsed.note?parsed.note+' ':'')+'(AI service unavailable — used the built-in parser.)'; }
+  previewConstraints(bed,base,parsed.constraints,text,parsed.note);
+}
 function previewConstraints(bed,base,fresh,text,note){
   const st=convo[bed.id]||(convo[bed.id]={});
   if(!st.backup)st.backup=JSON.parse(JSON.stringify(state.layouts[bed.id]||[]));   // first preview snapshots the committed layout
@@ -1808,14 +1829,27 @@ function renderConvo(bed){
   const st=convo[bed.id]||{}, pending=!!st.backup, persisted=state.constraints[bed.id];
   host.innerHTML='';
   const wrap=document.createElement('div'); wrap.className='convobox'; wrap.style.marginTop='10px';
-  const cap=document.createElement('div'); cap.className='cap'; cap.innerHTML='<span>Or describe a change in your own words</span>'; wrap.appendChild(cap);
+  const cap=document.createElement('div'); cap.className='cap';
+  cap.innerHTML='<span>Or describe a change in your own words</span>';
+  // One-time password toggle to enable the AI (Netlify proxy) understanding. Without
+  // it — or if the proxy is unreachable — the box uses the built-in keyword parser.
+  const aiWrap=document.createElement('span'); aiWrap.className='caprt'; aiWrap.style.fontSize='12px';
+  const hasPw=!!localStorage.getItem(CONVO_PW_KEY);
+  const aiLink=document.createElement('a'); aiLink.href='#'; aiLink.style.cssText='color:#4a6b3a;cursor:pointer;text-decoration:none';
+  aiLink.textContent=hasPw?'AI understanding: on':'Enable AI understanding';
+  aiLink.title=hasPw?'Click to change or turn off the design password':'Enter the design password (your APP_PASSWORD) to route requests through Claude';
+  aiLink.onclick=e=>{e.preventDefault(); const cur=localStorage.getItem(CONVO_PW_KEY)||'';
+    const v=prompt(hasPw?'Change the design password (leave blank to turn AI off):':'Enter the design password to enable AI understanding:', cur);
+    if(v===null)return; if(v.trim())localStorage.setItem(CONVO_PW_KEY,v.trim()); else localStorage.removeItem(CONVO_PW_KEY); renderConvo(bed);};
+  aiWrap.appendChild(aiLink); cap.appendChild(aiWrap); wrap.appendChild(cap);
   const row=document.createElement('div'); row.style.cssText='display:flex;gap:6px;margin-top:4px';
   const inp=document.createElement('input'); inp.type='text'; inp.id='convoInput';
   inp.placeholder=pending?'Refine it — e.g. “more colour”, “add a shrub”':'e.g. “no hydrangeas, under 2 ft, more pollinators”';
   inp.style.cssText='flex:1;padding:7px 9px;border:1px solid #cfc9bf;border-radius:7px;font:inherit;min-width:0';
   const go=document.createElement('button'); go.type='button'; go.className='btn'; go.textContent='Generate';
   row.appendChild(inp); row.appendChild(go); wrap.appendChild(row);
-  const submit=()=>{const v=inp.value.trim(); if(v)runRequest(bed,v);};
+  const submit=async()=>{const v=inp.value.trim(); if(!v)return; go.disabled=true; inp.disabled=true; go.textContent='…';
+    try{await runRequest(bed,v);}catch(e){go.disabled=false; inp.disabled=false; go.textContent='Generate';}};   // previewConstraints re-renders on success, resetting the row
   go.onclick=submit; inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();submit();}});
   if(!pending&&hasConstraints(persisted)){
     const a=document.createElement('div'); a.className='convonote'; a.style.cssText='margin-top:6px;font-size:13px;color:#5c554a';
