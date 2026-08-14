@@ -1377,6 +1377,83 @@ function stylePalette(bed,style){
   });
   return out;
 }
+// ── Conversational design (issue 37) ─────────────────────────────────────────
+// Turn a set of parsed CONSTRAINTS into a palette, the same id-array-with-repeats
+// shape stylePalette/RECS produce (repeats = quantity), ready for defaultLayout.
+// This is the deterministic core the natural-language layer drives: a request
+// like "no hydrangeas, more pollinators, under 2 ft" is first parsed into the
+// constraints object below (by the LLM proxy, or a fallback keyword parser), then
+// this function selects and sizes the plants. Requests it can't act on aren't its
+// concern — the parser records those in a separate `unsupported` note for the UI.
+//
+// constraints = {
+//   exclude:[pid], excludeCat:[cat], require:[pid],   // require bypasses all filters
+//   nativeOnly:bool (default true), maxHeightFt:num,
+//   light:'sun'|'part sun'|'shade',                   // overrides the bed's own light
+//   color:'blue'|'purple'|'pink'|'red'|'orange'|'yellow'|'white',
+//   boost:['pollinator'], lowMaintenance:bool,
+//   style:<styleKey>                                  // optional bias toward a style
+// }
+function hueOf(pid){                       // crude hex→HSL for colour requests
+  const hex=(PLANTS[pid]&&PLANTS[pid].color||'').replace('#','');
+  if(hex.length<6)return null;
+  const r=parseInt(hex.slice(0,2),16)/255,g=parseInt(hex.slice(2,4),16)/255,b=parseInt(hex.slice(4,6),16)/255;
+  const max=Math.max(r,g,b),min=Math.min(r,g,b),d=max-min,l=(max+min)/2;
+  const sat=d===0?0:d/(1-Math.abs(2*l-1));
+  let h=0; if(d!==0){h=max===r?((g-b)/d)%6:max===g?(b-r)/d+2:(r-g)/d+4;h*=60;if(h<0)h+=360;}
+  return{h,sat,l};
+}
+function colorMatch(pid,want){
+  const c=hueOf(pid); if(!c)return true;
+  if(want==='white')return c.l>0.82&&c.sat<0.22;
+  if(c.sat<0.15)return false;                          // greys/whites fail a hue ask
+  const bands={red:[[345,360],[0,15]],orange:[[15,40]],yellow:[[40,70]],
+    pink:[[305,345]],purple:[[265,305]],blue:[[200,265]]}[want];
+  return !bands||bands.some(([lo,hi])=>c.h>=lo&&c.h<=hi);
+}
+function constrainedPalette(bed,c){
+  c=c||{};
+  const lvl=BEDLVL[c.light]??BEDLVL[bed.light]??2;
+  const excl=new Set(c.exclude||[]), exclCat=new Set(c.excludeCat||[]),
+        req=new Set((c.require||[]).filter(pid=>PLANTS[pid]));
+  const nativeOnly=c.nativeOnly!==false;               // native by default (tool ethos)
+  const passes=pid=>{const p=PLANTS[pid]; if(!p||GEN_EXCLUDE.has(pid))return false;
+    if(excl.has(pid)||exclCat.has(p.cat))return false;
+    if(!lightOK(pid,lvl)||p.deer==='Often browsed')return false;
+    if(nativeOnly&&!p.naNative)return false;
+    if(c.maxHeightFt!=null&&plantHt(pid)>c.maxHeightFt)return false;
+    if(c.color&&!colorMatch(pid,c.color))return false;
+    return true;};
+  // Score: optional style bias + requested boosts, with a gentle default lean toward
+  // pollinators and plants whose ideal light matches the bed (the site-fit tie-break).
+  const dr=p=>({High:2,Moderate:1,Low:0}[p.drought]||0);
+  const score=pid=>{const p=PLANTS[pid]; let s=lightFit(pid,lvl)+(p.pollinator?1:0);
+    if(c.style)s+=styleScore(pid,c.style);
+    if((c.boost||[]).includes('pollinator'))s+=p.pollinator?3:0;
+    if(c.lowMaintenance)s+=dr(p)+(p.deer==='Occasional'||p.deer==='Rarely'?1:0);
+    return s;};
+  const base=Object.keys(PLANTS).filter(passes);
+  const total=(RECS[bed.id]||[]).length||12, out=[], used=new Set();
+  // Generic back-to-front layering (structure → mid → groundcover skirt), same
+  // budgeting as stylePalette so each species still lands as a proper drift.
+  [[pid=>plantRole(pid)==='struct',3,.30],
+   [pid=>plantRole(pid)==='mid',5,.50],
+   [pid=>plantRole(pid)==='ground',2,.20]].forEach(([inLayer,nmax,frac])=>{
+    const pool=base.filter(pid=>!used.has(pid)&&inLayer(pid))
+      .sort((a,b)=>score(b)-score(a)||plantHt(b)-plantHt(a));
+    if(!pool.length)return;
+    const budget=frac*total, nsp=Math.max(1,Math.min(nmax,Math.round(budget/3)));
+    const picks=pool.slice(0,Math.min(nsp,pool.length)), per=budget/picks.length;
+    picks.forEach(pid=>{used.add(pid);
+      const n=isSpecimen(pid)?Math.max(1,Math.round(per*0.5)):oddCount(per);
+      for(let k=0;k<n;k++)out.push(pid);});
+  });
+  // Force-include required plants even if they'd fail the filters ("keep the peony").
+  req.forEach(pid=>{if(used.has(pid))return; used.add(pid);
+    const n=isSpecimen(pid)?1:oddCount(total*0.12);
+    for(let k=0;k<n;k++)out.push(pid);});
+  return out;
+}
 // The styles offered for a bed: always Designer's Pick, plus any light-appropriate
 // style the catalog can actually fill (≥3 species / ≥5 plants), so shade beds don't
 // advertise a "Coastal" option that would come out empty.
