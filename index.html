@@ -166,7 +166,6 @@ header.top .topacts{margin-left:auto;align-self:center;display:flex;gap:8px;flex
 .rp-map{margin:2px 0 12px;text-align:center}
 .rp-map .rp-mapfig{position:relative;display:inline-block;border:1px solid var(--line);border-radius:9px;padding:10px 54px 10px 10px;background:#fcfdfb;max-width:100%}
 .rp-map .rp-mapsvg{display:block;height:230px;width:auto;max-width:100%;margin:0 auto}
-.rp-map .rp-mapcap{margin:7px auto 0;font-size:10.5px;color:var(--muted);text-align:center;font-style:italic;max-width:32em}
 /* Fixed-size north compass, same size + corner offset on every bed map (#49) */
 .rp-map .rp-compass{position:absolute;top:12px;right:8px;width:40px;height:40px}
 .rp-map .rp-compass-svg{display:block;width:100%;height:100%}
@@ -1183,7 +1182,7 @@ function reportHTML(units,title){
     const map=bedPlanSVG(pb.unit.bed, pb.unit.layout);
     // Compass is a fixed-size overlay pinned to the figure's top-right corner
     // (same size + offset on every bed), sitting clear of the plotted map. (#49)
-    if(map) h+=`<div class="rp-map"><div class="rp-mapfig"><span class="rp-compass">${compassSVG(bedMapAngle(pb.unit.bed))}</span>${map}<p class="rp-mapcap">Planting map — labels are the first letters of each plant; circles show mature spread. The compass marks north.</p></div></div>`;
+    if(map) h+=`<div class="rp-map"><div class="rp-mapfig"><span class="rp-compass">${compassSVG(bedMapAngle(pb.unit.bed))}</span>${map}</div></div>`;
     if(rows.length){
       h+=`<table class="rp-tbl"><thead><tr><th class="q">Key</th><th>Plant</th><th>Mature ht</th><th>Spacing</th><th>Light</th><th>Growing tips</th></tr></thead><tbody>`;
       h+=rows.map(r=>{const m=rowMeta(r.pid);const p=PLANTS[r.pid]||{};const q=r.newN+r.exN;
