@@ -3634,7 +3634,12 @@ function moveElevTip(e){const t=document.getElementById('eltip');if(!t)return;co
 function hideElevTip(){const t=document.getElementById('eltip');if(t)t.classList.remove('on');}
 // ---- Plant-list summary with quantities and spacing ----
 let drag=null;
-function svgPt(svg,e){const r=svg.getBoundingClientRect();const vb=svg.viewBox.baseVal;return[vb.x+(e.clientX-r.left)/r.width*vb.width,vb.y+(e.clientY-r.top)/r.height*vb.height];}
+// Pointer → SVG user coords via the element's own screen CTM, so it stays exact
+// even when preserveAspectRatio letterboxes the drawing (viewBox aspect ≠ element
+// aspect — e.g. a tall bed clamped by max-height, or the mobile full-height layout).
+// A plain width/height ratio ignores those gaps and makes dragged plants drift.
+function svgPt(svg,e){const m=svg.getScreenCTM();if(!m){const r=svg.getBoundingClientRect(),vb=svg.viewBox.baseVal;return[vb.x+(e.clientX-r.left)/r.width*vb.width,vb.y+(e.clientY-r.top)/r.height*vb.height];}
+  const pt=svg.createSVGPoint();pt.x=e.clientX;pt.y=e.clientY;const p=pt.matrixTransform(m.inverse());return[p.x,p.y];}
 function startDrag(e){e.preventDefault();const g=e.currentTarget;const i=+g.dataset.i;sel.plant=i;if(!state.layouts[sel.bed][i].exist)sel.editing=null;renderList();markSel();
   const svg=document.getElementById('schem');const[px,py]=svgPt(svg,e);const it=state.layouts[sel.bed][i];
   const tx=schemTx(bedById(sel.bed));const[dxp,dyp]=tx.fwd(it.x,it.y);
