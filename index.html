@@ -547,6 +547,44 @@ body.orbiting svg.elev,body.orbiting{cursor:grabbing}
 .srow .sqty{font-size:13px;font-weight:600;flex:none;font-variant-numeric:tabular-nums}
 .srow .soc{font-size:11.5px;color:var(--muted);flex:none;min-width:64px;text-align:right;font-variant-numeric:tabular-nums}
 .srow.exist .sqty{color:var(--muted)}
+
+/* ---- Walkthrough tour ---- */
+.howto-replay{appearance:none;font-family:Inter;font-size:14px;font-weight:500;cursor:pointer;
+  display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#fff;
+  border:1px solid var(--accent);border-radius:8px;padding:9px 16px;margin:0 0 24px}
+.howto-replay:hover{filter:brightness(.96)}
+#tourMask{position:fixed;inset:0;z-index:2000;display:none;cursor:default}
+#tourMask.on{display:block}
+#tourMask.cutout{background:transparent;pointer-events:none}   /* interactive step: hole is live */
+.tourframe{position:fixed;z-index:2001;background:transparent;display:none}
+.tourframe.on{display:block}
+#tourSpot{position:fixed;left:0;top:0;width:0;height:0;z-index:2001;border-radius:12px;pointer-events:none;
+  box-shadow:0 0 0 9999px rgba(24,28,26,.60), 0 0 0 3px var(--accent);
+  transition:left .3s cubic-bezier(.4,0,.2,1),top .3s cubic-bezier(.4,0,.2,1),width .3s cubic-bezier(.4,0,.2,1),height .3s cubic-bezier(.4,0,.2,1),opacity .2s;opacity:0}
+#tourSpot.on{opacity:1}
+#tourSpot.noanchor{box-shadow:0 0 0 9999px rgba(24,28,26,.60)}
+#tourTip{position:fixed;left:0;top:0;z-index:2002;width:340px;max-width:calc(100vw - 24px);box-sizing:border-box;
+  background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:14px;
+  box-shadow:0 18px 46px rgba(0,0,0,.34);padding:17px 18px 13px;font-family:Inter;
+  transition:left .3s cubic-bezier(.4,0,.2,1),top .3s cubic-bezier(.4,0,.2,1),opacity .2s;opacity:0}
+#tourTip.on{opacity:1}
+#tourTip .tt-step{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;margin:0 0 5px}
+#tourTip h4{font-family:Fraunces,serif;font-weight:500;font-size:18.5px;margin:0 0 7px;color:var(--ink);line-height:1.2}
+#tourTip .tt-body{font-size:14px;line-height:1.56;color:var(--muted);margin:0 0 14px}
+#tourTip .tt-body b{color:var(--ink);font-weight:600}
+#tourTip .tt-body ol{margin:9px 0 0;padding-left:1.25em}
+#tourTip .tt-body li{margin:0 0 6px}
+#tourTip .tt-body li:last-child{margin-bottom:0}
+.tt-foot{display:flex;align-items:center;gap:10px}
+.tt-dots{display:flex;gap:5px;flex:1;flex-wrap:wrap}
+.tt-dot{width:6px;height:6px;border-radius:50%;background:var(--line2);flex:none}
+.tt-dot.on{background:var(--accent)}
+.tt-skip{appearance:none;background:none;border:none;color:var(--muted);font-family:Inter;font-size:13px;cursor:pointer;padding:6px 2px}
+.tt-skip:hover{color:var(--ink)}
+.tt-nav{display:flex;gap:8px}
+button.tt-next,button.tt-back{appearance:none;font-family:Inter;font-size:13.5px;font-weight:500;border-radius:8px;padding:7px 14px;cursor:pointer;border:1px solid var(--line2);background:var(--paper2);color:var(--ink)}
+button.tt-next{background:var(--accent);border-color:var(--accent);color:#fff}
+button.tt-back[disabled]{opacity:.4;cursor:default}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 </style>
@@ -569,6 +607,8 @@ body.orbiting svg.elev,body.orbiting{cursor:grabbing}
     <div class="howto-inner">
       <h2>How to use this plan</h2>
       <p class="howto-lead">Seven beds wrap the house, each planted from a Cape&nbsp;Cod native palette. Open any bed to see its plants, rearrange them, try a different look, and preview how the bed will stand up in real life — then save your work or print a report.</p>
+
+      <button id="replayTour" class="howto-replay" type="button">▶ Start the walkthrough</button>
 
       <div class="howto-grid">
       <div class="howto-sec">
@@ -4313,6 +4353,175 @@ document.querySelector('.plan').addEventListener('click',e=>{
   document.getElementById('workspace').classList.remove('mapmin');
   document.body.classList.remove('bedopen');  // enlarged map scrolls normally
 });
+
+// ---- First-visit walkthrough tour ----
+(function(){
+  const TOUR_KEY='seenTutorial16', TOUR_BED='front_yard';
+  let mask,spot,tip,frame=[],idx=-1,active=false,repoTimers=[];
+
+  const bedEl=()=>document.querySelector('polygon.bed[data-bed="'+TOUR_BED+'"]');
+  const byId=id=>()=>document.getElementById(id);
+
+  const STEPS=[
+    { title:'Welcome to the Garden Plan', target:null, setup(){ closeDetail(); showTab('plan'); },
+      html:'Seven beds wrap the house, each planted from a Cape&nbsp;Cod native palette. This quick tour shows you around — it takes about a minute.' },
+    { title:'Open a bed', target:bedEl, setup(){ showTab('plan'); },
+      html:'<b>Tap any bed</b> on the plan to open it. We’ll open this one for you as we go.' },
+    { title:'The bed layout', target:byId('schem'), setup(){ selectBed(TOUR_BED); }, interactive:true,
+      html:'Here’s the bed seen from above. <b>Try dragging a plant’s token</b> now to move it around — the elevation below updates to match. In the two shared beds, plants move freely between both halves.' },
+    { title:'Add, swap &amp; remove', target:byId('addtrigger'), setup(){ selectBed(TOUR_BED); },
+      html:'Use <b>＋ Add a plant</b> to pick from the Cape&nbsp;Cod natives that suit this bed. Hover a token and click the <b>✕</b> to remove it; swap by removing one and adding another.' },
+    { title:'Suggested designs', target:()=>document.getElementById('stylepick')||document.querySelector('.stage .designs'), setup(){ selectBed(TOUR_BED); },
+      html:'Each bed has a hand-curated <b>Designer’s Pick</b> plus a few alternate styles that fit its light and soil. Tap a chip to lay one in, or <b>Reset to suggestion</b> to rebuild it.' },
+    { title:'The elevation view', target:()=>document.querySelector('.elevwrap'), setup(){ selectBed(TOUR_BED); },
+      html:'The elevation shows the bed <b>at eye level</b> — how heights, shapes, and blooms read side by side, even out of season. <b>Drag it to spin and tilt</b> the viewpoint; the arrow keys do the same.' },
+    { title:'Set a viewpoint', target:byId('setvp'), setup(){ selectBed(TOUR_BED); },
+      html:'Prefer an exact angle over spinning the view by hand? Stand yourself somewhere on the plan:'+
+           '<ol>'+
+             '<li>Tap <b>📍 Set viewpoint</b> — the cursor turns into a crosshair.</li>'+
+             '<li><b>Click a spot on the plan.</b> A ✕ marks where you’re standing, with a line pointing to the bed.</li>'+
+             '<li>The elevation redraws as seen from there. Tap <b>Set viewpoint</b> again to <b>drag the ✕</b> and fine-tune the angle.</li>'+
+           '</ol>' },
+    { title:'Plan ⇄ How&nbsp;to', target:byId('tabnav'), setup(){},
+      html:'Switch between the <b>Plan</b> and the <b>How&nbsp;to</b> page here. How&nbsp;to has the full written guide — and a button to replay this tour anytime.' },
+    { title:'Saving &amp; reports', target:()=>document.querySelector('.topacts'), setup(){},
+      html:'<b>🗂️ Saved plans</b> keeps whole-plan saves and single-bed designs together. <b>📋 Make report</b> builds a printable guide. Inside a bed, <b>💾 Save this bed</b> stores its planting to reuse.' },
+    { title:'You’re all set', target:null, setup(){},
+      html:'That’s the tour. Explore freely — nothing you try is permanent. You can <b>replay this anytime</b> from the <b>How&nbsp;to</b> page.' },
+  ];
+
+  function build(){
+    mask=document.createElement('div'); mask.id='tourMask'; mask.setAttribute('aria-hidden','true');
+    spot=document.createElement('div'); spot.id='tourSpot';
+    tip=document.createElement('div'); tip.id='tourTip';
+    tip.setAttribute('role','dialog'); tip.setAttribute('aria-modal','true'); tip.setAttribute('aria-live','polite');
+    // Four strips that frame the spotlight on interactive steps: they block clicks
+    // everywhere except the hole, so drags reach the highlighted element underneath.
+    frame=['t','b','l','r'].map(()=>{ const f=document.createElement('div'); f.className='tourframe'; return f; });
+    document.body.append(mask,spot,...frame,tip);
+    // Mask swallows clicks so the tour stays in control; clicking it does nothing.
+    mask.addEventListener('click',e=>{ e.preventDefault(); e.stopPropagation(); });
+  }
+
+  function setFrame(r,pad){
+    if(!r){ frame.forEach(f=>f.classList.remove('on')); return; }
+    const t=r.top-pad, b=r.bottom+pad, l=r.left-pad, rt=r.right+pad;
+    const put=(f,x,y,w,h)=>{ f.style.left=x+'px'; f.style.top=y+'px'; f.style.width=Math.max(0,w)+'px'; f.style.height=Math.max(0,h)+'px'; f.classList.add('on'); };
+    put(frame[0],0,0,innerWidth,t);                       // top
+    put(frame[1],0,b,innerWidth,innerHeight-b);           // bottom
+    put(frame[2],0,t,l,b-t);                              // left
+    put(frame[3],rt,t,innerWidth-rt,b-t);                 // right
+  }
+
+  function targetRect(step){
+    if(!step.target) return null;
+    const t=step.target(); if(!t) return null;
+    const r=t.getBoundingClientRect();
+    if(r.width===0 && r.height===0) return null;
+    return {el:t,r};
+  }
+
+  function position(step){
+    const info=targetRect(step), pad=8;
+    if(!info){
+      spot.classList.add('noanchor');
+      spot.style.left=(innerWidth/2)+'px'; spot.style.top=(innerHeight/2)+'px';
+      spot.style.width='0px'; spot.style.height='0px';
+      mask.classList.remove('cutout'); setFrame(null);
+      const w=tip.offsetWidth,h=tip.offsetHeight;
+      tip.style.left=Math.round((innerWidth-w)/2)+'px';
+      tip.style.top=Math.round((innerHeight-h)/2)+'px';
+      return;
+    }
+    spot.classList.remove('noanchor');
+    const r=info.r;
+    // Interactive step: turn the mask into a cutout so the hole is live and framed strips block the rest.
+    if(step.interactive){ mask.classList.add('cutout'); setFrame(r,pad); }
+    else { mask.classList.remove('cutout'); setFrame(null); }
+    spot.style.left=(r.left-pad)+'px'; spot.style.top=(r.top-pad)+'px';
+    spot.style.width=(r.width+pad*2)+'px'; spot.style.height=(r.height+pad*2)+'px';
+    const w=tip.offsetWidth,h=tip.offsetHeight,gap=16;
+    let top=r.bottom+gap, left=r.left+r.width/2-w/2;
+    if(top+h>innerHeight-10) top=r.top-gap-h;               // no room below → above
+    if(top<10){                                             // no room above/below → beside
+      top=Math.max(10,Math.min(innerHeight-h-10,r.top+r.height/2-h/2));
+      left=r.right+gap; if(left+w>innerWidth-10) left=r.left-gap-w;
+    }
+    left=Math.max(10,Math.min(left,innerWidth-w-10));
+    top=Math.max(10,Math.min(top,innerHeight-h-10));
+    tip.style.left=Math.round(left)+'px'; tip.style.top=Math.round(top)+'px';
+  }
+
+  function render(){
+    const step=STEPS[idx], n=STEPS.length;
+    tip.innerHTML='<p class="tt-step">Step '+(idx+1)+' of '+n+'</p>'+
+      '<h4>'+step.title+'</h4>'+
+      '<div class="tt-body">'+step.html+'</div>'+
+      '<div class="tt-foot">'+
+        '<div class="tt-dots">'+STEPS.map((_,i)=>'<span class="tt-dot'+(i===idx?' on':'')+'"></span>').join('')+'</div>'+
+        '<button class="tt-skip" type="button">Skip</button>'+
+        '<div class="tt-nav">'+
+          '<button class="tt-back" type="button"'+(idx===0?' disabled':'')+'>Back</button>'+
+          '<button class="tt-next" type="button">'+(idx===n-1?'Done':'Next')+'</button>'+
+        '</div>'+
+      '</div>';
+    tip.querySelector('.tt-skip').onclick=end;
+    tip.querySelector('.tt-back').onclick=()=>{ if(idx>0) go(idx-1); };
+    tip.querySelector('.tt-next').onclick=()=>{ idx===n-1?end():go(idx+1); };
+    tip.querySelector('.tt-next').focus({preventScroll:true});
+  }
+
+  function scheduleReposition(){
+    repoTimers.forEach(clearTimeout); repoTimers=[];
+    [60,200,400,700].forEach(d=>repoTimers.push(setTimeout(()=>{ if(active) position(STEPS[idx]); },d)));
+  }
+
+  function go(i){
+    idx=i; const step=STEPS[i];
+    try{ step.setup&&step.setup(); }catch(e){}
+    render();
+    const t=step.target&&step.target();
+    if(t&&t.scrollIntoView){ try{ t.scrollIntoView({block:'center',behavior:'smooth'}); }catch(e){} }
+    position(step);
+    scheduleReposition();
+  }
+
+  const onScrollResize=()=>{ if(active) position(STEPS[idx]); };
+  function onKey(e){
+    if(!active) return;
+    if(e.key==='Escape'){ e.preventDefault(); end(); }
+    else if(e.key==='ArrowRight'||e.key==='Enter'){ e.preventDefault(); idx<STEPS.length-1?go(idx+1):end(); }
+    else if(e.key==='ArrowLeft'){ e.preventDefault(); if(idx>0) go(idx-1); }
+  }
+
+  function start(){
+    if(active) return;
+    if(!mask) build();
+    active=true;
+    mask.classList.add('on'); spot.classList.add('on'); tip.classList.add('on');
+    window.addEventListener('scroll',onScrollResize,true);
+    window.addEventListener('resize',onScrollResize);
+    document.addEventListener('keydown',onKey,true);
+    go(0);
+  }
+  function end(){
+    if(!active) return;
+    active=false;
+    try{ localStorage.setItem(TOUR_KEY,'1'); }catch(e){}
+    mask.classList.remove('on','cutout'); spot.classList.remove('on'); tip.classList.remove('on'); setFrame(null);
+    window.removeEventListener('scroll',onScrollResize,true);
+    window.removeEventListener('resize',onScrollResize);
+    document.removeEventListener('keydown',onKey,true);
+    repoTimers.forEach(clearTimeout); repoTimers=[];
+  }
+
+  const replay=document.getElementById('replayTour');
+  if(replay) replay.onclick=start;
+
+  // First visit: auto-start once, unless arriving via a shared-plan link.
+  let seen=true; try{ seen=!!localStorage.getItem(TOUR_KEY); }catch(e){}
+  if(!seen && !/^#plan=/.test(location.hash||'')) setTimeout(start,700);
+})();
 
 handleSharedLink();
 
