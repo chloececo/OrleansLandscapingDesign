@@ -306,10 +306,8 @@ g.vpmark.active .vparm{stroke-width:5}
 .listcol .side{overflow:visible}
 .listcol .plist{flex:0 0 auto;overflow:visible}
 /* design picker relocated under the map */
-.leftcol>.designs{flex:none;background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:12px 14px}
-.leftcol>.designs .cap{margin-bottom:9px;display:flex;justify-content:space-between;align-items:center;gap:10px}
 /* Bed chosen: map shrinks to a rail on the left, plant list under it, views fill the right */
-.workspace.mapmin{grid-template-columns:31% 1fr}
+.workspace.mapmin{grid-template-columns:25% 1fr}
 .workspace.mapmin>.leftcol{align-self:stretch}
 .workspace.mapmin .plan{cursor:zoom-in}
 .workspace.mapmin .plan::after{content:"⤢  Click map to enlarge";position:absolute;left:8px;top:8px;
@@ -334,6 +332,23 @@ g.vpmark.active .vparm{stroke-width:5}
   body.bedopen .listcol{flex:1 1 auto;min-height:0;display:flex}
   body.bedopen .listcol .side{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
   body.bedopen .listcol .plist{flex:1 1 auto;min-height:0;overflow:auto}
+  /* Issue #52 — rebalance the left column toward the plant list (the thing being
+     worked on). Three things buy the list room: (1) the map rail is narrowed
+     (below) so the map is shorter — its bed-hotspot overlay stays aligned because
+     the aspect ratio is preserved; (2) the design picker stays in the wide right
+     column (it is NOT moved under the map in bedopen — see renderDetail), where
+     all its chips sit on one row instead of stealing 3 rows of the narrow rail;
+     (3) the rows are compacted. Together the left column becomes map + list only,
+     so the list gets nearly all the freed vertical space. */
+  body.bedopen .listcol .side{padding:14px 16px}
+  body.bedopen .listcol h3{margin-bottom:7px}
+  body.bedopen .listcol .ctrls{padding-bottom:11px;margin-bottom:11px}
+  body.bedopen .listcol .plist{gap:3px;margin-bottom:0}
+  body.bedopen .listcol .prow{padding:4px 7px}
+  body.bedopen .listcol .prow .nm{line-height:1.1}
+  /* Design picker as a slim bar at the top of the right column's stage */
+  body.bedopen .stage>.designs{flex:none;margin-bottom:12px}
+  body.bedopen .stage>.designs .cap{margin-bottom:8px}
   /* right column: schematic + elevation flex to share the height */
   body.bedopen #detail{min-height:0}
   body.bedopen .panel{display:flex;flex-direction:column;min-height:0;height:100%}
@@ -489,11 +504,9 @@ footer{color:var(--muted);font-size:12px;margin-top:22px;text-align:center}
 .chip{font-size:11.5px;border:1px solid var(--line2);border-radius:999px;padding:3px 9px;background:var(--paper2);color:var(--muted);white-space:nowrap}
 .chip.good{border-color:#bcd3b0;background:#eef4e7;color:#456e36}
 .chip.warn{border-color:#e4cda9;background:#f7efe0;color:#8a6526}
-.reflinks{margin:0 0 13px}
-.wiki{display:inline-block;margin:0 14px 4px 0;font-size:13px;color:#3f6b53;text-decoration:none;border-bottom:1px solid #bcd3b0}
-.wiki:hover{color:#27543a}
-.pt{display:inline-block;margin:0 0 4px;font-size:13px;color:#3f6b53;text-decoration:none;border-bottom:1px solid #bcd3b0}
-.pt:hover{color:#27543a}
+.reflinks{margin:0 0 13px;display:flex;flex-wrap:wrap;gap:6px 18px}
+.wiki,.pt{font-size:13px;color:#3f6b53;text-decoration:none;border-bottom:1px solid #bcd3b0;white-space:nowrap}
+.wiki:hover,.pt:hover{color:#27543a}
 /* Bloom-color picker (hydrangeas — issue #32): swatches set the plan circle and the
    elevation flowers together, so the two views always match. */
 .bloompick{margin:0 0 13px}
@@ -1685,12 +1698,11 @@ function renderDetail(){
   // so they sit under the map rail. Listeners were bound to these nodes above and
   // survive the move; ID-based lookups (renderList/renderSelCtrl) still resolve.
   document.getElementById('listcol').replaceChildren(panel.querySelector('.side'));
-  // Move the design picker under the map too, so the right column is all bed + elevation.
-  // Drop any picker left over from a previous render before inserting the fresh one,
-  // otherwise each re-render (e.g. picking a style) would stack another copy.
-  const leftcol=document.querySelector('#workspace .leftcol');
-  leftcol.querySelectorAll(':scope > .designs').forEach(el=>el.remove());
-  leftcol.insertBefore(panel.querySelector('.designs'), document.getElementById('listcol'));
+  // The design picker stays in the stage (top of the right column) — issue #52.
+  // The narrow left rail is reserved for the map + the plant list, which needs the
+  // room; the wide right column shows all the style chips on a single row. Clear any
+  // stray picker a previous render may have parked in the left column.
+  document.querySelectorAll('#workspace .leftcol > .designs').forEach(el=>el.remove());
 }
 
 // ---- Suggested-design picker (issue #24) ----------------------------------
@@ -3805,8 +3817,8 @@ function renderSelCtrl(){const box=document.getElementById('selctrl');if(!box)re
       <div class="chips">${plantChips(pl)}</div>
       ${bloomHtml}
       <div class="reflinks">
-        <a class="wiki" href="https://en.wikipedia.org/wiki/${pl.wiki}" target="_blank" rel="noopener">Learn more on Wikipedia \u2197</a>
-        <a class="pt" href="${ptUrl(pl)}" target="_blank" rel="noopener">Care info on PictureThis \u2197</a>
+        <a class="wiki" href="https://en.wikipedia.org/wiki/${pl.wiki}" target="_blank" rel="noopener">Wikipedia \u2197</a>
+        <a class="pt" href="${ptUrl(pl)}" target="_blank" rel="noopener">PictureThis \u2197</a>
       </div>
     </div>`;
   box.querySelectorAll('.bloomsw').forEach(b=>b.onclick=()=>{it.bloom=b.dataset.key;save();syncViews();});
