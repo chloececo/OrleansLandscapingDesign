@@ -4341,6 +4341,7 @@ function showTab(tab){
   const onHowto = tab==='howto';
   document.getElementById('howtoPanel').hidden = !onHowto;
   document.getElementById('workspace').hidden = onHowto;
+  if(onHowto) document.body.classList.remove('bedopen');  // clear the one-screen no-scroll fit so How-to can scroll
   document.querySelectorAll('#tabnav .tabbtn').forEach(b=>b.classList.toggle('on', b.dataset.tab===tab));
 }
 document.querySelectorAll('#tabnav .tabbtn').forEach(b=>{ b.onclick=()=>showTab(b.dataset.tab); });
