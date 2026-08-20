@@ -4592,7 +4592,7 @@ document.getElementById('suggestBtn').onclick=()=>openSuggest();
    same value. A user with the page already open polls version.json and, when it
    no longer matches this baked-in APP_VERSION, gets a Refresh banner. Work
    auto-saves to localStorage (gardenPlan16), so reloading loses nothing. */
-const APP_VERSION='2026-08-20.2';
+const APP_VERSION='2026-08-20.3';
 (function versionWatch(){
   const banner=document.getElementById('updbanner'); if(!banner) return;
   let latest=APP_VERSION, dismissed=null;           // dismissed = version the user hid this session
