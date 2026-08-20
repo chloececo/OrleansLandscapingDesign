@@ -69,6 +69,13 @@ header.top .topacts{margin-left:auto;align-self:center;display:flex;gap:8px;flex
 .sharebanner .stext{flex:1;min-width:200px;font-size:13.5px}
 .sharebanner .stext b{color:var(--ink)}
 .sharebanner .sacts{display:flex;gap:8px}
+/* Top-of-page "new version available" banner (issue #59), styled to match .sharebanner */
+.updbanner{position:sticky;top:0;z-index:40;background:#eef3e6;border-bottom:1px solid var(--line2);
+  padding:9px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.updbanner[hidden]{display:none}
+.updbanner .utext{flex:1;min-width:180px;font-size:13.5px;color:var(--ink)}
+.updbanner .uacts{display:flex;gap:8px}
+.updbanner .btn{padding:6px 12px;font-size:13px}
 
 /* add-a-plant palette modal (issue #47): wider than default, palette flows and the
    modal itself scrolls so the sticky category heads stay put and more cards show. */
@@ -611,6 +618,13 @@ button.tt-back[disabled]{opacity:.4;cursor:default}
 </style>
 </head>
 <body>
+<div id="updbanner" class="updbanner" hidden role="status" aria-live="polite">
+  <div class="utext"><b>A new version is available.</b> Refresh to load the latest — your saved work is kept.</div>
+  <div class="uacts">
+    <button class="btn primary" id="updRefresh" type="button">Refresh</button>
+    <button class="btn ghost" id="updDismiss" type="button" aria-label="Dismiss">Dismiss</button>
+  </div>
+</div>
 <div class="wrap">
   <header class="top">
     <h1>The Garden Plan</h1>
@@ -4493,6 +4507,34 @@ buildSavesModal(); buildReportView(); buildReportPicker(); buildAddPlantModal();
 document.getElementById('savesBtn').onclick=()=>openSaves();
 document.getElementById('reportBtn').onclick=()=>openReportPicker();
 document.getElementById('suggestBtn').onclick=()=>openSuggest();
+
+/* ---- New-version watcher (issue #59) ---------------------------------------
+   Static GitHub Pages app, so version detection is client-side polling.
+   DEPLOY STEP: on every release bump APP_VERSION below AND version.json to the
+   same value. A user with the page already open polls version.json and, when it
+   no longer matches this baked-in APP_VERSION, gets a Refresh banner. Work
+   auto-saves to localStorage (gardenPlan16), so reloading loses nothing. */
+const APP_VERSION='2026-08-20.1';
+(function versionWatch(){
+  const banner=document.getElementById('updbanner'); if(!banner) return;
+  let latest=APP_VERSION, dismissed=null;           // dismissed = version the user hid this session
+  const evaluate=()=>{ banner.hidden=!(latest!==APP_VERSION && latest!==dismissed); };
+  async function check(){
+    try{
+      const r=await fetch('version.json',{cache:'no-store'}); if(!r.ok) return;
+      const j=await r.json(); if(j&&j.version){ latest=String(j.version); evaluate(); }
+    }catch(e){ /* offline / not deployed yet — ignore */ }
+  }
+  document.getElementById('updRefresh').onclick=()=>{
+    // Cache-bust the reload so GitHub Pages serves the fresh index.html, keeping any share hash.
+    try{ const u=new URL(location.href); u.searchParams.set('v',latest); location.replace(u.toString()); }
+    catch(e){ location.reload(); }
+  };
+  document.getElementById('updDismiss').onclick=()=>{ dismissed=latest; banner.hidden=true; };
+  check();
+  setInterval(check, 5*60*1000);                    // modest poll — every 5 min
+  document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') check(); });
+})();
 
 // Plan / How-to tabs
 function showTab(tab){
