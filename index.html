@@ -73,7 +73,8 @@ header.top .topacts{margin-left:auto;align-self:center;display:flex;gap:8px;flex
 /* add-a-plant palette modal (issue #47): wider than default, palette flows and the
    modal itself scrolls so the sticky category heads stay put and more cards show. */
 .modal.addplant{width:min(820px,100%)}
-.modal.addplant .palfilter{margin:0 0 14px}
+.modal.addplant .palsearchrow{margin:0 0 14px}
+.modal.addplant .palfrow{margin:-4px 0 14px}
 .modal.addplant .palette{max-height:none;overflow:visible;padding-right:0}
 .modal.addplant .palhead{background:var(--card)}
 
@@ -473,6 +474,21 @@ select{width:100%;padding:9px 10px;border:1px solid var(--line2);border-radius:9
 .addtrigger{display:flex;align-items:center;justify-content:center;gap:8px;width:100%}
 .palfilter{width:100%;padding:8px 11px;border:1px solid var(--line2);border-radius:9px;background:var(--card);font-family:Inter;font-size:13.5px;color:var(--ink);box-sizing:border-box}
 .palfilter:focus{outline:none;border-color:var(--accent)}
+.palsearchrow{display:flex;align-items:stretch;gap:8px}
+.palsearchrow .palfilter{flex:1;width:auto}
+.palftoggle{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;font-family:Inter;font-size:13px;color:var(--ink);background:var(--card);border:1px solid var(--line2);border-radius:9px;padding:0 13px;cursor:pointer}
+.palftoggle:hover{border-color:var(--accent)}
+.palftoggle[aria-expanded="true"]{border-color:var(--accent);background:var(--paper2)}
+.palfbadge{min-width:17px;height:17px;padding:0 4px;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;line-height:1;color:#fff;background:var(--accent);border-radius:999px}
+.palfbadge[hidden]{display:none}
+.palfrow{display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin:0 0 12px}
+.palfrow[hidden]{display:none}
+.palfsel{appearance:none;font-family:Inter;font-size:12px;color:var(--ink);background:var(--card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='6'%3E%3Cpath d='M0 0l4.5 5L9 0z' fill='%23999'/%3E%3C/svg%3E") no-repeat right 8px center;border:1px solid var(--line2);border-radius:999px;padding:4px 22px 4px 10px;cursor:pointer}
+.palfsel:focus{outline:none;border-color:var(--accent)}
+.palfsel.on{border-color:var(--accent);background-color:var(--paper2);color:var(--ink);font-weight:600}
+.palclear{font-size:11.5px;font-family:Inter;color:var(--muted);background:none;border:none;cursor:pointer;text-decoration:underline;padding:4px 2px}
+.palclear:hover{color:var(--ink)}
+.palclear[hidden]{display:none}
 .palette{display:flex;flex-direction:column;gap:12px;max-height:320px;overflow:auto;padding-right:2px}
 .palgroup{display:flex;flex-direction:column;gap:7px}
 /* class display rules above out-specify the UA [hidden] rule, so restate it for the filter */
@@ -1645,7 +1661,7 @@ function selectBed(id){
     document.getElementById('detail').scrollIntoView({behavior:'smooth',block:'start'});
 }
 function closeDetail(){
-  sel.bed=null; sel.plant=null; sel.editing=null; palOpen=false; palQuery='';
+  sel.bed=null; sel.plant=null; sel.editing=null; palOpen=false; palQuery=''; palFilters={cat:'',light:'',ht:'',spread:'',color:''};
   if(addPlantModal) addPlantModal.classList.remove('show');          // dismiss the add-plant picker if open
   document.getElementById('workspace').classList.remove('mapmin');   // restore the full-size map
   document.body.classList.remove('bedopen');                         // allow normal page scroll again
@@ -3876,7 +3892,7 @@ function renderSelCtrl(){const box=document.getElementById('selctrl');if(!box)re
 }
 
 // ---- Add-plant palette (grid of plant "ID cards"), shown in a collapsible dropdown ----
-let palQuery='', palOpen=false;
+let palQuery='', palOpen=false, palFilters={cat:'',light:'',ht:'',spread:'',color:''};
 function addPlant(bed,pid){const pts=interiorPts(bed);const c=pts[Math.floor(pts.length/2)];state.layouts[bed.id].push({pid,x:c[0],y:c[1]});sel.plant=state.layouts[bed.id].length-1;save();renderDetail();}
 // One plant's elevation silhouette on a flat ground line — same per-category art the
 // bed's elevation uses, so a card previews exactly how the plant will be drawn. Returns
@@ -3905,6 +3921,41 @@ function plantIconInner(pid){
   if(pl.cat==='Groundcover'&&ELEV_GROUND[pid]) return elevGroundMarkup(it,bx,by,rx,ch);
   return `<path d="${elevBush(bx,by,rx,ch*1.1,rnd)}" fill="${pl.color}" fill-opacity="0.92" stroke="rgba(0,0,0,.24)" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
 }
+/* ---- Add-a-plant structured filters (issue #58) ---------------------------
+   Every catalog attribute is reduced to a small, stable bucket so filtering
+   stays a cheap DOM pass over data-attributes stashed on each card. */
+function lightBucket(l){l=(l||'').toLowerCase().trim();
+  if(l.startsWith('part'))return 'part';
+  if(l.startsWith('shade'))return 'shade';
+  return 'sun';}                              // "Full sun", "Sun to …"
+function htBand(h){return h>=6?'tall':h>=2?'med':'short';}
+function spreadBand(s){return s>=4?'wide':s>=2?'med':'narrow';}
+function colorBucket(hex){
+  hex=String(hex||'').replace('#',''); if(hex.length===3)hex=hex.split('').map(c=>c+c).join('');
+  const r=parseInt(hex.slice(0,2),16)/255,g=parseInt(hex.slice(2,4),16)/255,b=parseInt(hex.slice(4,6),16)/255;
+  const mx=Math.max(r,g,b),mn=Math.min(r,g,b),c=mx-mn,l=(mx+mn)/2;
+  if(l>=0.86)return 'white';               // pale creams read as white blooms
+  if(c<0.10)return l>0.6?'white':'green';   // near-neutral: pale → white, dark → foliage green
+  let h=mx===r?((g-b)/c)%6:mx===g?(b-r)/c+2:(r-g)/c+4; h*=60; if(h<0)h+=360;
+  if(h<16||h>=345)return 'red';
+  if(h<40)return 'orange';
+  if(h<70)return 'yellow';
+  if(h<170)return 'green';
+  if(h<250)return 'blue';
+  if(h<290)return 'purple';
+  return 'pink';
+}
+// Options for the filter dropdowns, in menu order. value → label.
+const PAL_TYPES=['Shrub','Perennial','Grass','Fern','Herb','Groundcover','Vine','Tree'];
+const PAL_LIGHT=[['sun','Full sun'],['part','Part sun / shade'],['shade','Shade']];
+const PAL_HT=[['short','Short (< 2 ft)'],['med','Medium (2–6 ft)'],['tall','Tall (6 ft +)']];
+const PAL_SPREAD=[['narrow','Narrow (< 2 ft)'],['med','Medium (2–4 ft)'],['wide','Wide (4 ft +)']];
+const PAL_COLOR=[['green','Green'],['yellow','Yellow'],['orange','Orange'],['red','Red'],['pink','Pink'],['purple','Purple'],['blue','Blue'],['white','White']];
+const PAL_ARIA={cat:'type',light:'sun exposure',ht:'height',spread:'width',color:'color'};
+function palSelHTML(key,allLabel,opts){
+  return `<select class="palfsel" data-filter="${key}" aria-label="Filter by ${PAL_ARIA[key]||key}"><option value="">${allLabel}</option>`+
+    opts.map(([v,l])=>`<option value="${v}">${l}</option>`).join('')+`</select>`;
+}
 function fillPalette(container,bed){
   const cats={}; Object.entries(PLANTS).forEach(([id,p])=>{if(id==='oak')return;(cats[p.cat]=cats[p.cat]||[]).push([id,p]);});
   const counts={}; (state.layouts[bed.id]||[]).forEach(it=>{counts[it.pid]=(counts[it.pid]||0)+1;});
@@ -3914,7 +3965,8 @@ function fillPalette(container,bed){
     h+=`<div class="palgroup"><h4 class="palhead">${esc(cat)}</h4><div class="palcards">`;
     cats[cat].sort((a,b)=>a[1].name.localeCompare(b[1].name)).forEach(([id,p])=>{
       const n=counts[id]||0, search=esc((p.name+' '+(p.sci||'')).toLowerCase());
-      h+=`<button type="button" class="plcard" data-pid="${esc(id)}" data-search="${search}" title="Add ${esc(p.name)}${n?` (${n} already in this bed)`:''}">`+
+      const da=`data-cat="${esc(p.cat)}" data-light="${lightBucket(p.light)}" data-ht="${htBand(plantHt(id))}" data-spread="${spreadBand(p.spread)}" data-color="${colorBucket(p.color)}"`;
+      h+=`<button type="button" class="plcard" data-pid="${esc(id)}" data-search="${search}" ${da} title="Add ${esc(p.name)}${n?` (${n} already in this bed)`:''}">`+
          `<span class="picon-wrap"><svg class="picon" preserveAspectRatio="xMidYMax meet">${plantIconInner(id)}</svg></span>`+
          `<span class="pcname">${esc(p.name)}</span>`+
          `<span class="pcmeta">${esc(p.spread)} ft · ${esc(p.light)}</span>`+
@@ -3923,7 +3975,7 @@ function fillPalette(container,bed){
     });
     h+='</div></div>';
   });
-  h+='<div class="palnone" hidden>No plants match your search.</div>';
+  h+='<div class="palnone" hidden>No plants match these filters.</div>';
   container.innerHTML=h;
   // Elevation art is drawn in feet with the ground at y=0; fit each icon's viewBox to
   // its own drawn bounds so every card previews at a comparable, box-filling size.
@@ -3931,12 +3983,18 @@ function fillPalette(container,bed){
     if(bb.width&&bb.height)svg.setAttribute('viewBox',`${bb.x-m} ${bb.y-m} ${bb.width+2*m} ${bb.height+2*m}`);});
   container.querySelectorAll('.plcard').forEach(card=>{card.onclick=()=>addPlant(bed,card.dataset.pid);});
 }
-function filterPalette(container,q){
-  q=(q||'').trim().toLowerCase(); let total=0;
+function filterPalette(container,q,f){
+  q=(q||'').trim().toLowerCase(); f=f||{}; let total=0;
   container.querySelectorAll('.palgroup').forEach(group=>{
     let any=false;
     group.querySelectorAll('.plcard').forEach(card=>{
-      const match=!q||card.dataset.search.includes(q);
+      const d=card.dataset;
+      const match=(!q||d.search.includes(q))
+        &&(!f.cat||d.cat===f.cat)
+        &&(!f.light||d.light===f.light)
+        &&(!f.ht||d.ht===f.ht)
+        &&(!f.spread||d.spread===f.spread)
+        &&(!f.color||d.color===f.color);
       card.hidden=!match; if(match){any=true;total++;}
     });
     group.hidden=!any;
@@ -3953,7 +4011,18 @@ function buildAddPlantModal(){
   addPlantModal=document.createElement('div'); addPlantModal.className='modalbg';
   addPlantModal.innerHTML=`<div class="modal addplant" role="dialog" aria-modal="true" aria-label="Add a plant">
     <div class="mhead"><h2>Add a plant</h2><button class="close" aria-label="Close">×</button></div>
-    <input type="search" id="palfilter" class="palfilter" placeholder="Search plants…" autocomplete="off" aria-label="Search plants to add">
+    <div class="palsearchrow">
+      <input type="search" id="palfilter" class="palfilter" placeholder="Search plants…" autocomplete="off" aria-label="Search plants to add">
+      <button type="button" class="palftoggle" id="palftoggle" aria-expanded="false" aria-controls="palfrow">Filters<span class="palfbadge" id="palfbadge" hidden></span></button>
+    </div>
+    <div class="palfrow" id="palfrow" hidden>
+      ${palSelHTML('cat','All types',PAL_TYPES.map(t=>[t,t]))}
+      ${palSelHTML('light','Any sun',PAL_LIGHT)}
+      ${palSelHTML('ht','Any height',PAL_HT)}
+      ${palSelHTML('spread','Any width',PAL_SPREAD)}
+      ${palSelHTML('color','Any color',PAL_COLOR)}
+      <button type="button" class="palclear" id="palclear" hidden>Clear filters</button>
+    </div>
     <div class="palette" id="palette"></div>
   </div>`;
   document.body.appendChild(addPlantModal);
@@ -3969,8 +4038,26 @@ function openAddPlant(bed){
   pal.querySelectorAll('.plcard').forEach(card=>{ card.onclick=()=>{ palOpen=false; addPlantModal.classList.remove('show'); addPlant(bed,card.dataset.pid); }; });
   const pf=addPlantModal.querySelector('#palfilter');
   pf.value=palQuery;
-  pf.oninput=()=>{ palQuery=pf.value; filterPalette(pal,palQuery); };
-  filterPalette(pal,palQuery);
+  const clearBtn=addPlantModal.querySelector('#palclear');
+  const sels=[...addPlantModal.querySelectorAll('.palfsel')];
+  const frow=addPlantModal.querySelector('#palfrow');
+  const toggle=addPlantModal.querySelector('#palftoggle');
+  const badge=addPlantModal.querySelector('#palfbadge');
+  const apply=()=>{
+    filterPalette(pal,palQuery,palFilters);
+    const nActive=sels.filter(s=>s.value).length;
+    clearBtn.hidden=!(palQuery.trim()||nActive);
+    sels.forEach(s=>s.classList.toggle('on',!!s.value));
+    badge.hidden=!nActive; badge.textContent=nActive||'';
+  };
+  const setPanel=open=>{ frow.hidden=!open; toggle.setAttribute('aria-expanded',open?'true':'false'); };
+  // Reveal the filter panel automatically whenever filters are already active.
+  setPanel(sels.some(s=>palFilters[s.dataset.filter]));
+  toggle.onclick=()=>setPanel(frow.hidden);
+  pf.oninput=()=>{ palQuery=pf.value; apply(); };
+  sels.forEach(s=>{ s.value=palFilters[s.dataset.filter]||''; s.onchange=()=>{ palFilters[s.dataset.filter]=s.value; apply(); }; });
+  clearBtn.onclick=()=>{ palQuery=''; pf.value=''; palFilters={cat:'',light:'',ht:'',spread:'',color:''}; sels.forEach(s=>s.value=''); apply(); pf.focus(); };
+  apply();
   addPlantModal.classList.add('show');
   pf.focus();
 }
