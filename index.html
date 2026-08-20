@@ -47,6 +47,11 @@ header.top .topacts{margin-left:auto;align-self:center;display:flex;gap:8px;flex
 .saverow input{flex:1;font-family:Inter;font-size:14px;color:var(--ink);background:var(--paper2);
   border:1px solid var(--line2);border-radius:9px;padding:9px 11px}
 .saverow input:focus{outline:none;border-color:var(--accent)}
+.modal textarea.sgarea{width:100%;box-sizing:border-box;font-family:Inter;font-size:14px;color:var(--ink);
+  background:var(--paper2);border:1px solid var(--line2);border-radius:9px;padding:9px 11px;resize:vertical;min-height:110px}
+.modal textarea.sgarea:focus{outline:none;border-color:var(--accent)}
+.sgacts{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+.sg-hp{position:absolute!important;left:-9999px!important;width:1px;height:1px;opacity:0;pointer-events:none}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
 .saves-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
 .saves-empty{color:var(--muted);font-size:13.5px;text-align:center;padding:14px 0}
@@ -598,6 +603,7 @@ button.tt-back[disabled]{opacity:.4;cursor:default}
       <button class="tabbtn" data-tab="howto" type="button">How&nbsp;to</button>
     </nav>
     <span class="topacts">
+      <button id="suggestBtn" class="btn ghost" type="button">💡 Suggest a change</button>
       <button id="reportBtn" class="btn ghost" type="button">📋 Make report</button>
       <button id="savesBtn" class="btn ghost" type="button">🗂️ Saved plans</button>
     </span>
@@ -4104,6 +4110,70 @@ function switchTab(name){
   savesModal.querySelectorAll('.mpane').forEach(p=>p.classList.toggle('on',p.dataset.pane===name));
 }
 
+/* ---- Suggest a change (emails Chloe via Web3Forms — no backend, works on GitHub Pages) ----
+   SETUP: go to https://web3forms.com, enter chloe.cc@exthymic.com, and paste the
+   free access key they email you between the quotes below. It's safe to be public —
+   the key can ONLY send email to that verified address, nothing else. */
+const WEB3FORMS_ACCESS_KEY='9b3669a4-c3f2-4e6c-a9ca-b7b70b5eaf7d';
+let suggestModal=null;
+function buildSuggestModal(){
+  suggestModal=document.createElement('div'); suggestModal.className='modalbg';
+  suggestModal.innerHTML=`<div class="modal" role="dialog" aria-modal="true" aria-label="Suggest a change">
+    <div class="mhead"><h2>Suggest a change</h2><button class="close" aria-label="Close">×</button></div>
+    <p class="msub">Have an idea, or something you'd like changed about the plan?</p>
+    <form id="suggestForm" novalidate>
+      <textarea id="sgMsg" class="sgarea" placeholder="What would you like to suggest or change?" required></textarea>
+      <input type="checkbox" name="botcheck" class="sg-hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+      <div class="sgacts">
+        <button type="button" class="btn" id="sgCancel">Cancel</button>
+        <button type="submit" class="btn primary" id="sgSend">Send suggestion</button>
+      </div>
+      <div class="msg" id="sgMsgOut"></div>
+    </form>
+  </div>`;
+  document.body.appendChild(suggestModal);
+  const form=suggestModal.querySelector('#suggestForm');
+  const msgEl=suggestModal.querySelector('#sgMsg');
+  const hpEl=suggestModal.querySelector('input[name="botcheck"]');
+  const sendBtn=suggestModal.querySelector('#sgSend');
+  const out=suggestModal.querySelector('#sgMsgOut');
+  const setOut=(t,err)=>{ out.textContent=t||''; out.style.color=err?'var(--accent)':'var(--muted)'; };
+  suggestModal.querySelector('.close').onclick=closeSuggest;
+  suggestModal.querySelector('#sgCancel').onclick=closeSuggest;
+  suggestModal.addEventListener('pointerdown',e=>{ if(e.target===suggestModal) closeSuggest(); });
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&suggestModal.classList.contains('show')) closeSuggest(); });
+  form.addEventListener('submit',async e=>{
+    e.preventDefault();
+    const message=msgEl.value.trim();
+    if(!message){ setOut('Please write your suggestion first.',true); msgEl.focus(); return; }
+    if(WEB3FORMS_ACCESS_KEY.indexOf('YOUR-')===0){ setOut('Not set up yet — this form still needs its access key.',true); return; }
+    sendBtn.disabled=true; setOut('Sending…',false);
+    try{
+      const res=await fetch('https://api.web3forms.com/submit',{
+        method:'POST',
+        headers:{'Content-Type':'application/json',Accept:'application/json'},
+        body:JSON.stringify({
+          access_key:WEB3FORMS_ACCESS_KEY,
+          subject:'🌿 New suggestion for The Garden Plan',
+          from_name:'The Garden Plan',
+          message,
+          botcheck:hpEl.checked
+        })
+      });
+      const data=await res.json();
+      if(data.success){ closeSuggest(); form.reset(); toast('Thanks! Your suggestion was sent to Chloe.'); }
+      else{ setOut('Hmm, that didn’t send. Please try again in a moment.',true); sendBtn.disabled=false; }
+    }catch(err){ setOut('Couldn’t send — please check the internet connection and try again.',true); sendBtn.disabled=false; }
+  });
+}
+function openSuggest(){
+  const out=suggestModal.querySelector('#sgMsgOut'); if(out) out.textContent='';
+  const sendBtn=suggestModal.querySelector('#sgSend'); if(sendBtn) sendBtn.disabled=false;
+  suggestModal.classList.add('show');
+  const msgEl=suggestModal.querySelector('#sgMsg'); if(msgEl) setTimeout(()=>msgEl.focus(),40);
+}
+function closeSuggest(){ suggestModal.classList.remove('show'); }
+
 function buildSavesModal(){
   savesModal=document.createElement('div'); savesModal.className='modalbg';
   savesModal.innerHTML=`<div class="modal" role="dialog" aria-modal="true" aria-label="Saved plans">
@@ -4332,9 +4402,10 @@ async function handleSharedLink(){
 }
 
 load(); buildOverlay(); renderViewpoints();
-buildSavesModal(); buildReportView(); buildReportPicker(); buildAddPlantModal();
+buildSavesModal(); buildReportView(); buildReportPicker(); buildAddPlantModal(); buildSuggestModal();
 document.getElementById('savesBtn').onclick=()=>openSaves();
 document.getElementById('reportBtn').onclick=()=>openReportPicker();
+document.getElementById('suggestBtn').onclick=()=>openSuggest();
 
 // Plan / How-to tabs
 function showTab(tab){
