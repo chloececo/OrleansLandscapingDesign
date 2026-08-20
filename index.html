@@ -545,6 +545,31 @@ footer{color:var(--muted);font-size:12px;margin-top:22px;text-align:center}
 .bloomsw:hover{transform:translateY(-1px)}
 .bloomsw:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .bloomsw.on{box-shadow:0 0 0 2px var(--card),0 0 0 3.5px var(--ink)}
+/* ---- Per-plant size editor (issue #57) ---- */
+.sizepick{margin:0 0 13px}
+.sizebtn{display:inline-flex;align-items:center;gap:7px;font-family:Inter;font-size:13px;font-weight:500;
+  color:var(--ink);background:var(--paper2);border:1px solid var(--line2);border-radius:9px;padding:7px 12px;cursor:pointer}
+.sizebtn:hover{background:#e4e8d8;border-color:var(--accent)}
+.sizebtn[aria-expanded="true"]{border-color:var(--accent);background:#e9efe0}
+.sizebtn .caret{font-size:10px;color:var(--muted);transition:transform .15s}
+.sizebtn[aria-expanded="true"] .caret{transform:rotate(180deg)}
+.szedited{color:var(--accent);font-weight:600}
+.szedited[hidden]{display:none}
+.sizepanel{margin-top:11px}
+.sizepanel[hidden]{display:none}
+.sizehead{display:flex;align-items:baseline;justify-content:space-between;margin:0 0 8px}
+.sizelab{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+.sizereset{font-size:11.5px;color:var(--muted);background:none;border:none;cursor:pointer;text-decoration:underline;padding:0}
+.sizereset:hover{color:var(--ink)}
+.sizereset[hidden]{display:none}
+.szrow{display:flex;align-items:center;gap:10px;margin:0 0 9px}
+.szrow:last-child{margin-bottom:0}
+.szname{width:50px;font-size:12.5px;color:var(--muted)}
+.stepper{display:inline-flex;align-items:center;border:1px solid var(--line2);border-radius:8px;overflow:hidden;background:var(--paper2);flex:none}
+.stepper button{appearance:none;border:none;background:none;width:26px;height:28px;font-size:16px;line-height:1;color:var(--ink);cursor:pointer}
+.stepper button:hover{background:#e4e8d8}
+.stepper .val{min-width:54px;text-align:center;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;border-left:1px solid var(--line2);border-right:1px solid var(--line2);padding:4px 2px}
+.szrange{flex:1;min-width:60px;accent-color:var(--accent);height:4px}
 /* ---- Elevation view ---- */
 .elevwrap{position:relative;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
 .elevwrap .cap{font-size:12px;color:var(--muted);margin:0 0 10px;display:flex;justify-content:space-between;align-items:center;gap:10px}
@@ -820,14 +845,22 @@ const HT={
 const HTCAT={Tree:30,Shrub:5,Grass:3,Fern:3,Perennial:2.5,Herb:1.5,Groundcover:0.5,Vine:10};
 function plantHt(pid){const p=PLANTS[pid];if(!p)return 2;if(HT[pid]!=null)return HT[pid];return HTCAT[p.cat]||2;}
 // Height as drawn in the elevation (tall trees/vines capped so a bed still reads).
-function showHt(it){const p=PLANTS[it.pid];let ht=plantHt(it.pid);if(!p)return ht;if(p.cat==='Tree')ht=Math.min(ht,16);if(p.cat==='Vine')ht=Math.min(ht,10);return Math.max(0.3,ht);}
+// A per-instance override (it.h, issue #57) wins over the catalog height.
+function showHt(it){const p=PLANTS[it.pid];let ht=(it&&it.h!=null)?it.h:plantHt(it.pid);if(!p)return Math.max(0.3,ht);if(p.cat==='Tree')ht=Math.min(ht,16);if(p.cat==='Vine')ht=Math.min(ht,10);return Math.max(0.3,ht);}
 // Canopy diameter as drawn in the elevation — the SAME canopy the plan circle uses
 // in renderSchem: suggested plants get the RAD_SCALE "settling-in" size, existing
 // plants their true (or custom-r) size, so one plant reads the same width in both
 // views. (Mirrors the radius picked at renderSchem's plant loop.)  #23
-function showW(it){const pl=PLANTS[it.pid],def=it.exist?existDef(it.eid):null;
+// A per-instance override (it.r, issue #57) is the drawn canopy DIAMETER in feet.
+function showW(it){
+  if(it&&it.r!=null) return Math.max(0.4,it.r);
+  return baseW(it);}
+// Catalog-default drawn diameter / height (ignoring any it.r/it.h override) — used
+// for the size-editor's baseline, clamps, and "reset to default".  #57
+function baseW(it){const pl=PLANTS[it.pid],def=it.exist?existDef(it.eid):null;
   const r=it.exist?Math.max(0.55,((def&&def.r)||(pl?pl.spread:1.5))/2):plantRadius(pl?pl.spread:1.5);
   return r*2;}
+function baseH(it){const p=PLANTS[it.pid];let ht=plantHt(it.pid);if(p){if(p.cat==='Tree')ht=Math.min(ht,16);if(p.cat==='Vine')ht=Math.min(ht,10);}return Math.max(0.3,ht);}
 // O.C. spacing label derived from mature spread.
 function ocLabel(pid){const s=PLANTS[pid]?PLANTS[pid].spread:1.5;return s<1.5?`${Math.round(s*12)}″ O.C.`:`${s%1?s.toFixed(1):s}′ O.C.`;}
 
@@ -1178,8 +1211,7 @@ function bedPlanSVG(bed,layout){
   const toks=[];
   (layout||[]).forEach(it=>{ const pl=PLANTS[it.pid]; if(!pl) return;
     if(!isFinite(it.x)||!isFinite(it.y)) return;
-    const def=it.exist?existDef(it.eid):null;
-    const r=it.exist?Math.max(0.55,((def&&def.r)||pl.spread)/2):plantRadius(pl.spread);
+    const r=showW(it)/2;                     // honors per-instance size override (#57)
     const [tx,ty]=rot(it.x,it.y);
     eat(tx-r,ty-r); eat(tx+r,ty+r); toks.push({it,pl,r,tx,ty}); });
   if(!isFinite(minX)) return '';
@@ -1856,9 +1888,10 @@ function renderSchem(){
   const fs=Math.max(0.42,Math.min(wFt,hFt)*0.05); const lay=state.layouts[bed.id];
   // Draw existing (greyed) plants first so suggested plants render on top.
   lay.map((it,i)=>({it,i})).sort((a,b)=>(a.it.exist?0:1)-(b.it.exist?0:1)).forEach(({it,i})=>{
-    const pl=PLANTS[it.pid];if(!pl)return;const def=it.exist?existDef(it.eid):null;
-    // existing (real, already-there) plants keep true size; suggested plants use settling-in scale
-    const r=it.exist?Math.max(0.55,((def&&def.r)||pl.spread)/2):plantRadius(pl.spread);
+    const pl=PLANTS[it.pid];if(!pl)return;
+    // existing plants keep true size, suggested use settling-in scale, and any per-instance
+    // size override (issue #57) flows through showW so the circle matches the elevation.
+    const r=showW(it)/2;
     const editable=!it.exist || sel.editing===i;
     const g=document.createElementNS(SVGNS,'g');g.dataset.i=i;
     g.setAttribute('class','tok'+(it.exist?' exist':'')+(i===sel.plant?' sel':'')+(it.exist&&!editable?' locked':''));
@@ -3892,17 +3925,62 @@ function renderSelCtrl(){const box=document.getElementById('selctrl');if(!box)re
         <div class="bloomlab">Bloom color</div>
         <div class="bloomrow">${blooms.map(v=>`<button type="button" class="bloomsw${v.key===curBloom?' on':''}" data-key="${v.key}" title="${v.name}" aria-label="${v.name}" style="background:${v.col}"></button>`).join('')}</div>
       </div>`:'';
+  // Per-plant size editor (issue #57): a collapsed "Edit size" button opening Width/Height bars.
+  const ftLab=v=>`${(Math.round(v*10)/10).toFixed(1)} ft`;
+  const bw=baseW(it), bh=baseH(it);
+  const wLo=Math.max(0.3,+(bw*0.4).toFixed(2)), wHi=+(bw*2.5).toFixed(2);
+  const hLo=Math.max(0.3,+(bh*0.4).toFixed(2)), hHi=+(bh*2).toFixed(2);
+  const curW=it.r!=null?it.r:bw, curH=it.h!=null?it.h:bh, edited=(it.r!=null||it.h!=null);
+  const sizeHtml=`<div class="sizepick">
+        <button type="button" class="sizebtn" id="sizebtn" aria-expanded="false" aria-controls="sizepanel">📐 Edit size<span class="szedited" id="szedited"${edited?'':' hidden'}>· edited</span><span class="caret">▾</span></button>
+        <div class="sizepanel" id="sizepanel" hidden>
+          <div class="sizehead"><span class="sizelab">Size</span><button type="button" class="sizereset" id="sizereset"${edited?'':' hidden'}>Reset to default</button></div>
+          <div class="szrow" data-dim="w"><span class="szname">Width</span>
+            <span class="stepper"><button type="button" class="szminus" aria-label="Narrower">−</button><span class="val">${ftLab(curW)}</span><button type="button" class="szplus" aria-label="Wider">+</button></span>
+            <input class="szrange" type="range" min="${wLo}" max="${wHi}" step="0.25" value="${curW}" aria-label="Plant width in feet">
+          </div>
+          <div class="szrow" data-dim="h"><span class="szname">Height</span>
+            <span class="stepper"><button type="button" class="szminus" aria-label="Shorter">−</button><span class="val">${ftLab(curH)}</span><button type="button" class="szplus" aria-label="Taller">+</button></span>
+            <input class="szrange" type="range" min="${hLo}" max="${hHi}" step="0.25" value="${curH}" aria-label="Plant height in feet">
+          </div>
+        </div>
+      </div>`;
   box.innerHTML=`<div class="pcard">
       <div class="pcard-h"><span class="sw" style="background:${headCol}"></span>
         <div><div class="pc-name">${pl.name}</div><div class="pc-sci">${pl.sci}</div></div></div>
       <div class="chips">${plantChips(pl)}</div>
       ${bloomHtml}
+      ${sizeHtml}
       <div class="reflinks">
         <a class="wiki" href="https://en.wikipedia.org/wiki/${pl.wiki}" target="_blank" rel="noopener">Wikipedia \u2197</a>
         <a class="pt" href="${ptUrl(pl)}" target="_blank" rel="noopener">PictureThis \u2197</a>
       </div>
     </div>`;
   box.querySelectorAll('.bloomsw').forEach(b=>b.onclick=()=>{it.bloom=b.dataset.key;save();syncViews();});
+  // ---- Size editor wiring (#57) ----
+  const sizebtn=box.querySelector('#sizebtn');
+  if(sizebtn){
+    const sizepanel=box.querySelector('#sizepanel'), szedited=box.querySelector('#szedited'), sizereset=box.querySelector('#sizereset');
+    const snap=v=>Math.round(v/0.25)*0.25;
+    const markEdited=()=>{const e=(it.r!=null||it.h!=null);szedited.hidden=!e;sizereset.hidden=!e;};
+    sizebtn.onclick=()=>{const open=sizepanel.hidden;sizepanel.hidden=!open;sizebtn.setAttribute('aria-expanded',open?'true':'false');};
+    box.querySelectorAll('.szrow').forEach(row=>{
+      const dim=row.dataset.dim, range=row.querySelector('.szrange'), val=row.querySelector('.val');
+      const lo=+range.min, hi=+range.max;
+      // Update the plan circle + elevation live, but NOT the list/card (syncViews rebuilds
+    // this card and would collapse the panel mid-drag), so redraw just the two views.
+    const refreshViews=()=>{ renderSchem(); renderElev(); };
+    const setV=v=>{ v=Math.max(lo,Math.min(hi,snap(v))); range.value=v; val.textContent=ftLab(v);
+        if(dim==='w')it.r=v; else it.h=v; markEdited(); save(); refreshViews(); };
+      range.oninput=()=>setV(+range.value);
+      row.querySelector('.szminus').onclick=()=>setV(+range.value-0.25);
+      row.querySelector('.szplus').onclick=()=>setV(+range.value+0.25);
+    });
+    sizereset.onclick=()=>{ delete it.r; delete it.h; save(); renderSchem(); renderElev();
+      box.querySelectorAll('.szrow').forEach(row=>{ const base=row.dataset.dim==='w'?baseW(it):baseH(it);
+        row.querySelector('.szrange').value=base; row.querySelector('.val').textContent=ftLab(base); });
+      markEdited(); };
+  }
 }
 
 // ---- Add-plant palette (grid of plant "ID cards"), shown in a collapsible dropdown ----
